@@ -256,12 +256,12 @@ public:
 				it != m_vMentionKeywords.end(); ++it) {
 			const CString& sKeyword = *it;
 
-			if (sKeyword.Equals("{nick}") && sMessage.WildCmp("*" + sNick + "*")) {
+			if (sKeyword.Equals("{nick}") && sMessage.find(sNick) != std::string::npos) {
 				bResult = true;
 				break;
 			}
 
-			if (sMessage.WildCmp("*" + sKeyword + "*")) {
+			if (sMessage.find(sKeyword) != std::string::npos) {
 				bResult = true;
 				break;
 			}
@@ -277,7 +277,7 @@ public:
 				it != m_vIgnoreKeywords.end(); ++it) {
 			const CString& sKeyword = *it;
 
-			if (sMessage.WildCmp("*" + sKeyword + "*")) {
+			if (sMessage.find(sKeyword) != std::string::npos) {
 				bResult = true;
 				break;
 			}
