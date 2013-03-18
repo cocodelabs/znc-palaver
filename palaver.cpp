@@ -613,6 +613,20 @@ public:
 					Table.SetCell("Network", sNetwork);
 					Table.SetCell("Negotiating", CString(device.InNegotiation()));
 				}
+
+				if (networks.size() == 0) {
+					Table.SetCell("Device", device.GetToken());
+					Table.SetCell("User", sUsername);
+					Table.SetCell("Network", "");
+					Table.SetCell("Negotiating", CString(device.InNegotiation()));
+				}
+			}
+
+			if (msvsNetworks.size() == 0) {
+				Table.SetCell("Device", device.GetToken());
+				Table.SetCell("User", "");
+				Table.SetCell("Network", "");
+				Table.SetCell("Negotiating", CString(device.InNegotiation()));
 			}
 		}
 
