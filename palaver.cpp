@@ -318,6 +318,10 @@ public:
 		module.AddSocket(pSocket);
 	}
 
+	std::map<CString, VCString> GetNetworks() const {
+		return m_msvsNetworks;
+	}
+
 private:
 	CString m_sToken;
 	CString m_sVersion;
@@ -344,6 +348,8 @@ public:
 		AddHelpCommand();
 		AddCommand("test", static_cast<CModCommand::ModCmdFunc>(&CPalaverMod::HandleTestCommand),
 			"", "Send notifications to registered devices");
+		AddCommand("list", static_cast<CModCommand::ModCmdFunc>(&CPalaverMod::HandleListCommand),
+			"", "List all registered devices");
 	}
 
 #pragma mark - Cap
@@ -571,6 +577,54 @@ public:
 			PutModule("Notification sent to " + CString(count) + " clients.");
 		} else {
 			PutModule("You need to connect with a network.");
+		}
+	}
+
+	void HandleListCommand(const CString &sLine) {
+		if (m_pUser->IsAdmin() == false) {
+			PutModule("Permission denied");
+			return;
+		}
+
+		CTable Table;
+
+		Table.AddColumn("Device");
+		Table.AddColumn("User");
+		Table.AddColumn("Network");
+		Table.AddColumn("Negotiating");
+
+		for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
+				it != m_vDevices.end(); ++it)
+		{
+			CDevice &device = **it;
+
+			const std::map<CString, VCString> msvsNetworks = device.GetNetworks();
+			std::map<CString, VCString>::const_iterator it2 = msvsNetworks.begin();
+			for (;it2 != msvsNetworks.end(); ++it2) {
+				const CString sUsername = it2->first;
+				const VCString &networks = it2->second;
+
+				for (VCString::const_iterator it3 = networks.begin(); it3 != networks.end(); ++it3) {
+					const CString sNetwork = *it3;
+
+					Table.AddRow();
+					Table.SetCell("Device", device.GetToken());
+					Table.SetCell("User", sUsername);
+					Table.SetCell("Network", sNetwork);
+					Table.SetCell("Negotiating", CString(device.InNegotiation()));
+				}
+			}
+		}
+
+		if (PutModule(Table) == 0) {
+			PutModule("There are no devices registered with this server.");
+		}
+
+		CDevice *pDevice = DeviceForClient(*m_pClient);
+		if (pDevice) {
+			PutModule("You are connected from Palaver. (" + pDevice->GetToken() + ")");
+		} else {
+			PutModule("You are not connected from a Palaver client.");
 		}
 	}
 
