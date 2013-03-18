@@ -340,7 +340,11 @@ private:
 
 class CPalaverMod : public CModule {
 public:
-	MODCONSTRUCTOR(CPalaverMod) {}
+	MODCONSTRUCTOR(CPalaverMod) {
+		AddHelpCommand();
+		AddCommand("test", static_cast<CModCommand::ModCmdFunc>(&CPalaverMod::HandleTestCommand),
+			"", "Send notifications to registered devices");
+	}
 
 #pragma mark - Cap
 
@@ -545,6 +549,29 @@ public:
 	virtual EModRet OnPrivMsg(CNick& Nick, CString& sMessage) {
 		ParseMessage(Nick, sMessage, NULL);
 		return CONTINUE;
+	}
+
+#pragma mark - Commands
+
+	void HandleTestCommand(const CString& sLine) {
+		if (m_pNetwork) {
+			unsigned int count = 0;
+
+			for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
+					it != m_vDevices.end(); ++it)
+			{
+				CDevice& device = **it;
+
+				if (device.HasNetwork(*m_pNetwork)) {
+					count++;
+					device.SendNotification(*this, "palaver", "Test notification", NULL);
+				}
+			}
+
+			PutModule("Notification sent to " + CString(count) + " clients.");
+		} else {
+			PutModule("You need to connect with a network.");
+		}
 	}
 
 private:
