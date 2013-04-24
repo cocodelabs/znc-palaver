@@ -816,7 +816,7 @@ public:
 #pragma mark -
 
 	void ParseMessage(CNick& Nick, CString& sMessage, CChan *pChannel = NULL) {
-		if (m_pNetwork->IsUserOnline() == false) {
+		if (true || m_pNetwork->IsUserOnline() == false) {
 			for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
 					it != m_vDevices.end(); ++it)
 			{
