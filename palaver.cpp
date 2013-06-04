@@ -377,9 +377,9 @@ public:
 			CString sCommand = sLine.Token(1);
 
 			if (sCommand.Equals("BACKGROUND")) {
-				m_pClient->SetAway(true);
+				pClient->SetAway(true);
 			} else if (sCommand.Equals("FOREGROUND")) {
-				m_pClient->SetAway(false);
+				pClient->SetAway(false);
 			} else if (sCommand.Equals("IDENTIFY")) {
 				CDevice *pDevice = DeviceForClient(*pClient);
 				if (pDevice) {
