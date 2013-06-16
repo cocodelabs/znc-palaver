@@ -256,12 +256,12 @@ public:
 				it != m_vMentionKeywords.end(); ++it) {
 			const CString& sKeyword = *it;
 
-			if (sKeyword.Equals("{nick}") && sMessage.find(sNick) != std::string::npos) {
-				bResult = true;
-				break;
-			}
-
-			if (sMessage.find(sKeyword) != std::string::npos) {
+			if (sKeyword.Equals("{nick}")) {
+				if (sMessage.find(sNick) != std::string::npos) {
+					bResult = true;
+					break;
+				}
+			} else if (sMessage.find(sKeyword) != std::string::npos) {
 				bResult = true;
 				break;
 			}
