@@ -841,6 +841,7 @@ public:
 				}
 
 				if (networks.size() == 0) {
+					Table.AddRow();
 					Table.SetCell("Device", device.GetToken());
 					Table.SetCell("User", sUsername);
 					Table.SetCell("Network", "");
@@ -849,6 +850,7 @@ public:
 			}
 
 			if (msvsNetworks.size() == 0) {
+				Table.AddRow();
 				Table.SetCell("Device", device.GetToken());
 				Table.SetCell("User", "");
 				Table.SetCell("Network", "");
