@@ -289,11 +289,26 @@ public:
 #pragma mark - Notifications
 
 	void SendNotification(CModule& module, const CString& sSender, const CString& sNotification, const CChan *pChannel) {
-		// todo parse from m_sPushEndpoint
-		bool bUseTLS = true;
-		CString sHostname = "api.palaverapp.com";
-		unsigned short uPort = 443;
-		CString sPath = "/1/push";
+		unsigned short uPort = 80;
+
+		CString sPushEndpoint = GetPushEndpoint();
+		CString sScheme = sPushEndpoint.Token(0, false, "://");
+		CString sTemp = sPushEndpoint.Token(1, true, "://");
+		CString sAddress = sTemp.Token(0, false, "/");
+
+		CString sHostname = sAddress.Token(0, false, ":");
+		CString sPort = sAddress.Token(1, true, ":");
+		CString sPath = "/" + sTemp.Token(1, true, "/");
+
+		if (sPort.empty()) {
+			if (sScheme.Equals("https")) {
+				uPort = 443;
+			} else if (sScheme.Equals("http")) {
+				uPort = 80;
+			}
+		} else {
+			uPort = sPort.ToUShort();
+		}
 
 		CString sJSON = "{";
 		sJSON += "\"message\": \"" + sNotification.Replace_n("\"", "\\\"") + "\"";
