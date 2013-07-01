@@ -12,6 +12,7 @@
 #include <znc/IRCNetwork.h>
 #include <znc/Client.h>
 #include <znc/Chan.h>
+#include <znc/FileUtils.h>
 
 
 
@@ -95,11 +96,39 @@ public:
 		}
 	}
 
-	void AddNetwork(CIRCNetwork& network) {
-		CUser *user = network.GetUser();
-		const CString& sUsername = user->GetUserName();
+	bool AddNetwork(CIRCNetwork& network) {
+		return AddNetworkNamed(network.GetUser()->GetUserName(), network.GetName());
+	}
 
-		m_msvsNetworks[sUsername].push_back(network.GetName());
+	bool HasNetworkNamed(const CString& sUsername, const CString& sNetwork) const {
+		bool bHasNetwork = false;
+
+		std::map<CString, VCString>::const_iterator it = m_msvsNetworks.find(sUsername);
+		if (it != m_msvsNetworks.end()) {
+			const VCString& vNetworks = it->second;
+
+			for (VCString::const_iterator it2 = vNetworks.begin(); it2 != vNetworks.end(); ++it2) {
+				const CString &name = *it2;
+
+				if (name.Equals(sNetwork)) {
+					bHasNetwork = true;
+					break;
+				}
+			}
+		}
+
+		return bHasNetwork;
+	}
+
+	bool AddNetworkNamed(const CString& sUsername, const CString& sNetwork) {
+		bool bDidAddNetwork = false;
+
+		if (HasNetworkNamed(sUsername, sNetwork) == false) {
+			m_msvsNetworks[sUsername].push_back(sNetwork);
+			bDidAddNetwork = true;
+		}
+
+		return bDidAddNetwork;
 	}
 
 	void RemoveNetwork(CIRCNetwork& network) {
@@ -286,6 +315,120 @@ public:
 		return bResult;
 	}
 
+#pragma mark - Serialization
+
+	void ParseLine(const CString& sLine) {
+		if (InNegotiation() == false) {
+			return;
+		}
+
+		CString sCommand = sLine.Token(0);
+
+		if (sCommand.Equals("SET")) {
+			CString sKey = sLine.Token(1);
+			CString sValue = sLine.Token(2, true);
+
+			if (sKey.Equals("VERSION")) {
+				SetVersion(sValue);
+			} else if (sKey.Equals(kPLVPushEndpointKey)) {
+				SetPushEndpoint(sValue);
+			}
+		} else if (sCommand.Equals("ADD")) {
+			CString sKey = sLine.Token(1);
+			CString sValue = sLine.Token(2, true);
+
+			if (sKey.Equals(kPLVIgnoreKeywordKey)) {
+				AddIgnoreKeyword(sValue);
+			} else if (sKey.Equals(kPLVIgnoreChannelKey)) {
+				AddIgnoreChannel(sValue);
+			} else if (sKey.Equals(kPLVIgnoreNickKey)) {
+				AddIgnoreNick(sValue);
+			} else if (sKey.Equals(kPLVMentionKeywordKey)) {
+				AddMentionKeyword(sValue);
+			} else if (sKey.Equals(kPLVMentionChannelKey)) {
+				AddMentionChannel(sValue);
+			} else if (sKey.Equals(kPLVMentionNickKey)) {
+				AddMentionNick(sValue);
+			} else if (sKey.Equals("NETWORK")) {
+				CString sUsername = sValue.Token(0);
+				CString sNetwork = sValue.Token(1);
+
+				AddNetworkNamed(sUsername, sNetwork);
+			}
+		} else if (sCommand.Equals("END")) {
+			SetInNegotiation(false);
+		}
+	}
+
+	void Write(CFile& File) const {
+		File.Write("BEGIN " + GetToken() + "\n");
+
+		if (GetVersion().empty() == false) {
+			File.Write("SET VERSION " + GetVersion() + "\n");
+		}
+
+		if (GetPushEndpoint().empty() == false) {
+			File.Write("SET " + CString(kPLVPushEndpointKey) + " " + GetPushEndpoint() + "\n");
+		}
+
+		for (VCString::const_iterator it = m_vMentionKeywords.begin();
+				it != m_vMentionKeywords.end(); ++it) {
+			const CString& sKeyword = *it;
+
+			File.Write("ADD " + CString(kPLVMentionKeywordKey) + " " + sKeyword + "\n");
+		}
+
+		for (VCString::const_iterator it = m_vMentionChannels.begin();
+				it != m_vMentionChannels.end(); ++it) {
+			const CString& sChannel = *it;
+
+			File.Write("ADD " + CString(kPLVMentionChannelKey) + " " + sChannel + "\n");
+		}
+
+		for (VCString::const_iterator it = m_vMentionNicks.begin();
+				it != m_vMentionNicks.end(); ++it) {
+			const CString& sNick = *it;
+
+			File.Write("ADD " + CString(kPLVMentionNickKey) + " " + sNick + "\n");
+		}
+
+		for (VCString::const_iterator it = m_vIgnoreKeywords.begin();
+				it != m_vIgnoreKeywords.end(); ++it) {
+			const CString& sKeyword = *it;
+
+			File.Write("ADD " + CString(kPLVIgnoreKeywordKey) + " " + sKeyword + "\n");
+		}
+
+		for (VCString::const_iterator it = m_vIgnoreChannels.begin();
+				it != m_vIgnoreChannels.end(); ++it) {
+			const CString& sChannel = *it;
+
+			File.Write("ADD " + CString(kPLVIgnoreChannelKey) + " " + sChannel + "\n");
+		}
+
+		for (VCString::const_iterator it = m_vIgnoreNicks.begin();
+				it != m_vIgnoreNicks.end(); ++it) {
+			const CString& sNick = *it;
+
+			File.Write("ADD " + CString(kPLVIgnoreNickKey) + " " + sNick + "\n");
+		}
+
+		for (std::map<CString, VCString>::const_iterator it = m_msvsNetworks.begin();
+				it != m_msvsNetworks.end(); ++it) {
+			const CString& sUsername = it->first;
+			const VCString& networks = it->second;
+
+			for (VCString::const_iterator it2 = networks.begin();
+					it2 != networks.end(); ++it2) {
+				const CString& sNetwork = *it2;
+
+				File.Write("ADD NETWORK " + sUsername + " " + sNetwork + "\n");
+			}
+		}
+
+		File.Write("END\n");
+	}
+
 #pragma mark - Notifications
 
 	void SendNotification(CModule& module, const CString& sSender, const CString& sNotification, const CChan *pChannel) {
@@ -367,6 +510,12 @@ public:
 			"", "List all registered devices");
 	}
 
+	virtual bool OnLoad(const CString& sArgs, CString& sMessage) {
+		Load();
+
+		return true;
+	}
+
 #pragma mark - Cap
 
 	virtual void OnClientCapLs(CClient* pClient, SCString& ssCaps) {
@@ -414,7 +563,9 @@ public:
 				device.AddClient(*pClient);
 
 				if (m_pNetwork) {
-					device.AddNetwork(*m_pNetwork);
+					if (device.AddNetwork(*m_pNetwork) && device.InNegotiation() == false) {
+						Save();
+					}
 				}
 			} else if (sCommand.Equals("BEGIN")) {
 				CString sToken = sLine.Token(2);
@@ -426,44 +577,14 @@ public:
 				device.SetVersion(sVersion);
 
 				device.AddClient(*pClient);
-			} else if (sCommand.Equals("END")) {
+			} else if (sCommand.Equals("SET") || sCommand.Equals("ADD") || sCommand.Equals("END")) {
 				CDevice *pDevice = DeviceForClient(*pClient);
 
 				if (pDevice) {
-					pDevice->SetInNegotiation(false);
-				}
-			} else if (sCommand.Equals("SET")) {
-				CString sKey = sLine.Token(2);
-				CString sValue = sLine.Token(3, true);
+					pDevice->ParseLine(sLine.Token(1, true));
 
-				CDevice *pDevice = DeviceForClient(*pClient);
-
-				if (pDevice) {
-					if (sKey.Equals("VERSION")) {
-						pDevice->SetVersion(sValue);
-					} else if (sKey.Equals(kPLVPushEndpointKey)) {
-						pDevice->SetPushEndpoint(sValue);
-					}
-				}
-			} else if (sCommand.Equals("ADD")) {
-				CString sKey = sLine.Token(2);
-				CString sValue = sLine.Token(3, true);
-
-				CDevice *pDevice = DeviceForClient(*pClient);
-
-				if (pDevice) {
-					if (sKey.Equals(kPLVIgnoreKeywordKey)) {
-						pDevice->AddIgnoreKeyword(sValue);
-					} else if (sKey.Equals(kPLVIgnoreChannelKey)) {
-						pDevice->AddIgnoreChannel(sValue);
-					} else if (sKey.Equals(kPLVIgnoreNickKey)) {
-						pDevice->AddIgnoreNick(sValue);
-					} else if (sKey.Equals(kPLVMentionKeywordKey)) {
-						pDevice->AddMentionKeyword(sValue);
-					} else if (sKey.Equals(kPLVMentionChannelKey)) {
-						pDevice->AddMentionChannel(sValue);
-					} else if (sKey.Equals(kPLVMentionNickKey)) {
-						pDevice->AddMentionNick(sValue);
+					if (sCommand.Equals("END")) {
+						Save();
 					}
 				}
 			}
@@ -480,7 +601,9 @@ public:
 		// Associate client with the user/network
 		CDevice *pDevice = DeviceForClient(*m_pClient);
 		if (pDevice && m_pNetwork) {
-			pDevice->AddNetwork(*m_pNetwork);
+			if (pDevice->AddNetwork(*m_pNetwork)) {
+				Save();
+			}
 		}
 	}
 
@@ -529,6 +652,94 @@ public:
 		}
 
 		return pDevice;
+	}
+
+#pragma mark - Serialization
+
+	CString GetConfigPath() const {
+		return (GetSavePath() + "/palaver.conf");
+	}
+
+	void Save() const {
+		CFile *pFile = new CFile(GetConfigPath());
+
+		if (!pFile->Open(O_WRONLY | O_CREAT | O_TRUNC, 0600)) {
+			DEBUG("palaver: Failed to save `" + GetConfigPath() + "` `" + CString(strerror(errno)) + "`");
+			delete pFile;
+			return;
+		}
+
+		for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
+				it != m_vDevices.end(); ++it) {
+			const CDevice& device = **it;
+			device.Write(*pFile);
+		}
+
+		pFile->Sync();
+
+		if (pFile->HadError()) {
+			DEBUG("palaver: Failed to save `" + GetConfigPath() + "` `" + CString(strerror(errno)) + "`");
+			pFile->Delete();
+		}
+
+		delete pFile;
+	}
+
+	void Load() {
+		if (!CFile::Exists(GetConfigPath())) {
+			DEBUG("palaver: Config file doesn't exist");
+			return;
+		}
+
+		if (!CFile::IsReg(GetConfigPath())) {
+			DEBUG("palaver: Config file isn't a file");
+			return;
+		}
+
+		CFile *pFile = new CFile(GetConfigPath());
+		if (!pFile->Open(GetConfigPath(), O_RDONLY)) {
+			DEBUG("palaver: Error opening config file");
+			delete pFile;
+			return;
+		}
+
+		if (!pFile->Seek(0)) {
+			DEBUG("palaver: Error can't seek to start of config file");
+			delete pFile;
+			return;
+		}
+
+		CString sLine;
+		CDevice *pDevice = NULL;
+
+		while (pFile->ReadLine(sLine)) {
+			sLine.TrimLeft();
+			sLine.TrimRight("\n");
+
+			if (pDevice == NULL) {
+				CString sCommand = sLine.Token(0);
+
+				if (sCommand.Equals("BEGIN")) {
+					CString sToken = sLine.Token(1);
+
+					pDevice = new CDevice(sToken);
+					m_vDevices.push_back(pDevice);
+
+					pDevice->ResetDevice();
+					pDevice->SetInNegotiation(true);
+				}
+			}
+
+			if (pDevice) {
+				pDevice->ParseLine(sLine);
+
+				if (!pDevice->InNegotiation()) {
+					pDevice = NULL;
+				}
+			}
+		}
+
+		delete pFile;
 	}
 
 #pragma mark -
@@ -584,7 +795,7 @@ public:
 				CDevice& device = **it;
 
 				if (device.HasNetwork(*m_pNetwork)) {
-					count++;
+					++count;
 					device.SendNotification(*this, "palaver", "Test notification", NULL);
 				}
 			}
