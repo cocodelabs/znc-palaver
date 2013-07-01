@@ -319,7 +319,7 @@ public:
 		sJSON += "}";
 
 		CSocket *pSocket = new CSocket(&module);
-		pSocket->Connect(sHostname, uPort, bUseTLS);
+		pSocket->Connect(sHostname, uPort, sScheme.Equals("https"));
 		pSocket->Write("POST " + sPath + " HTTP/1.1\r\n");
 		pSocket->Write("Host: " + sHostname + "\r\n");
 		pSocket->Write("Authorization: Bearer " + GetToken() + "\r\n");
