@@ -875,5 +875,8 @@ private:
 	std::vector<CDevice*> m_vDevices;
 };
 
-GLOBALMODULEDEFS(CPalaverMod, "Palaver support module")
+template<> void TModInfo<CPalaverMod>(CModInfo& Info) {
+	Info.SetWikiPage("palaver");
+}
 
+GLOBALMODULEDEFS(CPalaverMod, "Palaver support module")
