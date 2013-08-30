@@ -562,8 +562,9 @@ public:
 
 				device.AddClient(*pClient);
 
-				if (m_pNetwork) {
-					if (device.AddNetwork(*m_pNetwork) && device.InNegotiation() == false) {
+				CIRCNetwork *pNetwork = pClient->GetNetwork();
+				if (pNetwork) {
+					if (device.AddNetwork(*pNetwork) && device.InNegotiation() == false) {
 						Save();
 					}
 				}
