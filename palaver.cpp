@@ -27,6 +27,57 @@ const char *kPLVIgnoreChannelKey = "IGNORE-CHANNEL";
 const char *kPLVIgnoreNickKey = "IGNORE-NICK";
 
 
+class PLVHTTPSocket : public CSocket {
+public:
+	PLVHTTPSocket(CModule *pModule, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : CSocket(pModule) {
+		unsigned short uPort = 80;
+
+		CString sScheme = sURL.Token(0, false, "://");
+		CString sTemp = sURL.Token(1, true, "://");
+		CString sAddress = sTemp.Token(0, false, "/");
+
+		CString sHostname = sAddress.Token(0, false, ":");
+		CString sPort = sAddress.Token(1, true, ":");
+		CString sPath = "/" + sTemp.Token(1, true, "/");
+
+		if (sPort.empty()) {
+			if (sScheme.Equals("https")) {
+				uPort = 443;
+			} else if (sScheme.Equals("http")) {
+				uPort = 80;
+			}
+		} else {
+			uPort = sPort.ToUShort();
+		}
+
+		mcsHeaders["Connection"] = "close";
+		mcsHeaders["User-Agent"] = "ZNC";
+
+		if (sMethod.Equals("GET") == false) {
+			mcsHeaders["Content-Length"] = CString(sContent.length());
+		}
+
+		Connect(sHostname, uPort, sScheme.Equals("https"));
+		Write(sMethod + " HTTP/1.1\r\n");
+		Write("Host: " + sHostname + "\r\n");
+
+		for (MCString::const_iterator it = mcsHeaders.begin(); it != mcsHeaders.end(); ++it) {
+			CString sKey;
+			CString sValue;
+
+			Write(sKey + ": " + sValue + "\r\n");
+		}
+
+		Write("\r\n");
+
+		if (sContent.length() > 0) {
+			Write(sContent);
+		}
+
+		Close(Csock::CLT_AFTERWRITE);
+	}
+};
+
 class CDevice {
 public:
 	CDevice(const CString &sToken) {
@@ -432,26 +483,10 @@ public:
 #pragma mark - Notifications
 
 	void SendNotification(CModule& module, const CString& sSender, const CString& sNotification, const CChan *pChannel) {
-		unsigned short uPort = 80;
+		MCString mcsHeaders;
 
-		CString sPushEndpoint = GetPushEndpoint();
-		CString sScheme = sPushEndpoint.Token(0, false, "://");
-		CString sTemp = sPushEndpoint.Token(1, true, "://");
-		CString sAddress = sTemp.Token(0, false, "/");
-
-		CString sHostname = sAddress.Token(0, false, ":");
-		CString sPort = sAddress.Token(1, true, ":");
-		CString sPath = "/" + sTemp.Token(1, true, "/");
-
-		if (sPort.empty()) {
-			if (sScheme.Equals("https")) {
-				uPort = 443;
-			} else if (sScheme.Equals("http")) {
-				uPort = 80;
-			}
-		} else {
-			uPort = sPort.ToUShort();
-		}
+		mcsHeaders["Authorization"] = CString("Bearer " + GetToken());
+		mcsHeaders["Content-Type"] = "application/json";
 
 		CString sJSON = "{";
 		sJSON += "\"message\": \"" + sNotification.Replace_n("\"", "\\\"") + "\"";
@@ -461,18 +496,7 @@ public:
 		}
 		sJSON += "}";
 
-		CSocket *pSocket = new CSocket(&module);
-		pSocket->Connect(sHostname, uPort, sScheme.Equals("https"));
-		pSocket->Write("POST " + sPath + " HTTP/1.1\r\n");
-		pSocket->Write("Host: " + sHostname + "\r\n");
-		pSocket->Write("Authorization: Bearer " + GetToken() + "\r\n");
-		pSocket->Write("Connection: close\r\n");
-		pSocket->Write("User-Agent: ZNC\r\n");
-		pSocket->Write("Content-Type: application/json\r\n");
-		pSocket->Write("Content-Length: " + CString(sJSON.length()) + "\r\n");
-		pSocket->Write("\r\n");
-		pSocket->Write(sJSON);
-		pSocket->Close(Csock::CLT_AFTERWRITE);
+		PLVHTTPSocket *pSocket = new PLVHTTPSocket(&module, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
 		module.AddSocket(pSocket);
 	}
 
