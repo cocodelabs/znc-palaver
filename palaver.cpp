@@ -83,6 +83,7 @@ public:
 	CDevice(const CString &sToken) {
 		m_sToken = sToken;
 		m_bInNegotiation = false;
+		m_uiBadge = 0;
 	}
 
 	CString GetVersion() const {
@@ -239,6 +240,8 @@ public:
 		m_vIgnoreKeywords.clear();
 		m_vIgnoreChannels.clear();
 		m_vIgnoreNicks.clear();
+
+		m_uiBadge = 0;
 	}
 
 	void AddMentionKeyword(const CString& sKeyword) {
@@ -483,13 +486,16 @@ public:
 #pragma mark - Notifications
 
 	void SendNotification(CModule& module, const CString& sSender, const CString& sNotification, const CChan *pChannel) {
+		++m_uiBadge;
+
 		MCString mcsHeaders;
 
 		mcsHeaders["Authorization"] = CString("Bearer " + GetToken());
 		mcsHeaders["Content-Type"] = "application/json";
 
 		CString sJSON = "{";
-		sJSON += "\"message\": \"" + sNotification.Replace_n("\"", "\\\"") + "\"";
+		sJSON += "\"badge\": " + m_uiBadge;
+		sJSON += ",\"message\": \"" + sNotification.Replace_n("\"", "\\\"") + "\"";
 		sJSON += ",\"sender\": \"" + sSender.Replace_n("\"", "\\\"") + "\"";
 		if (pChannel) {
 			sJSON += ",\"channel\": \"" + pChannel->GetName().Replace_n("\"", "\\\"") + "\"";
@@ -498,6 +504,22 @@ public:
 
 		PLVHTTPSocket *pSocket = new PLVHTTPSocket(&module, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
 		module.AddSocket(pSocket);
+	}
+
+	void ClearBadges(CModule& module) {
+		if (m_uiBadge != 0) {
+			MCString mcsHeaders;
+
+			mcsHeaders["Authorization"] = CString("Bearer " + GetToken());
+			mcsHeaders["Content-Type"] = "application/json";
+
+			CString sJSON = "{\"badge\": 0}";
+
+			PLVHTTPSocket *pSocket = new PLVHTTPSocket(&module, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
+			module.AddSocket(pSocket);
+
+			m_uiBadge = 0;
+		}
 	}
 
 	std::map<CString, VCString> GetNetworks() const {
@@ -522,6 +544,7 @@ private:
 	VCString m_vIgnoreNicks;
 
 	bool m_bInNegotiation;
+	unsigned int m_uiBadge;
 };
 
 class CPalaverMod : public CModule {
@@ -628,6 +651,19 @@ public:
 		if (pDevice && m_pNetwork) {
 			if (pDevice->AddNetwork(*m_pNetwork)) {
 				Save();
+			}
+		}
+
+		if (m_pNetwork) {
+			// Let's reset any other devices for this client
+
+			for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
+					it != m_vDevices.end(); ++it) {
+				CDevice& device = **it;
+
+				if (device.HasClient(*m_pClient) == false && device.HasNetwork(*m_pNetwork)) {
+					device.ClearBadges(*this);
+				}
 			}
 		}
 	}
