@@ -57,13 +57,17 @@ public:
 			mcsHeaders["Content-Length"] = CString(sContent.length());
 		}
 
-		Connect(sHostname, uPort, sScheme.Equals("https"));
-		Write(sMethod + " HTTP/1.1\r\n");
+		bool useSSL = sScheme.Equals("https");
+
+		DEBUG("Palaver: Connecting to '" << sHostname << "' on port " << uPort << (useSSL ? " with" : " without") << " TLS (" << sMethod << " " << sPath << ")");
+
+		Connect(sHostname, uPort, useSSL);
+		Write(sMethod + " " + sPath + " HTTP/1.1\r\n");
 		Write("Host: " + sHostname + "\r\n");
 
 		for (MCString::const_iterator it = mcsHeaders.begin(); it != mcsHeaders.end(); ++it) {
-			CString sKey;
-			CString sValue;
+			const CString &sKey = it->first;
+			const CString &sValue = it->second;
 
 			Write(sKey + ": " + sValue + "\r\n");
 		}
@@ -494,7 +498,7 @@ public:
 		mcsHeaders["Content-Type"] = "application/json";
 
 		CString sJSON = "{";
-		sJSON += "\"badge\": " + m_uiBadge;
+		sJSON += "\"badge\": " + CString(m_uiBadge);
 		sJSON += ",\"message\": \"" + sNotification.Replace_n("\"", "\\\"") + "\"";
 		sJSON += ",\"sender\": \"" + sSender.Replace_n("\"", "\\\"") + "\"";
 		if (pChannel) {
