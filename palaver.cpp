@@ -15,6 +15,10 @@
 #include <znc/FileUtils.h>
 
 
+#ifndef PALAVER_VERSION
+	#define PALAVER_VERSION "unknown"
+#endif
+
 
 const char *kPLVCapability = "palaverapp.com";
 const char *kPLVCommand = "PALAVER";
@@ -559,6 +563,8 @@ public:
 			"", "Send notifications to registered devices");
 		AddCommand("list", static_cast<CModCommand::ModCmdFunc>(&CPalaverMod::HandleListCommand),
 			"", "List all registered devices");
+		AddCommand("info", static_cast<CModCommand::ModCmdFunc>(&CPalaverMod::HandleInfoCommand),
+			"", "Show's module information");
 	}
 
 	virtual bool OnLoad(const CString& sArgs, CString& sMessage) {
@@ -935,6 +941,21 @@ public:
 		}
 	}
 
+	void HandleInfoCommand(const CString &sLine) {
+		PutModule("Please contact support@palaverapp.com if you have any troubles with this module.");
+		PutModule("Be sure to include all information from this command so we can try and debug any issues.");
+		PutModule("--");
+
+		PutModule("Palaver ZNC: " + CString(PALAVER_VERSION) + " -- http://palaverapp.com/");
+		CDevice *pDevice = DeviceForClient(*m_pClient);
+		if (pDevice) {
+			PutModule("Current device: (" + pDevice->GetToken() + ")");
+		}
+		PutModule(CString(m_vDevices.size()) + " registered devices");
+
+		PutStatus(CZNC::GetTag());
+		PutStatus(CZNC::GetCompileOptionsString());
+	}
 private:
 
 	std::vector<CDevice*> m_vDevices;
@@ -945,3 +966,4 @@ template<> void TModInfo<CPalaverMod>(CModInfo& Info) {
 }
 
 GLOBALMODULEDEFS(CPalaverMod, "Palaver support module")
+
