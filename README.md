@@ -4,7 +4,7 @@ Palaver ZNC module provides push notifications.
 
 ## Compiling
 
-    znc-buildmod palaver.cpp
+    make
 
 ## Installation
 
