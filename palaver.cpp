@@ -817,6 +817,12 @@ public:
 
 	void ParseMessage(CNick& Nick, CString& sMessage, CChan *pChannel = NULL) {
 		if (m_pNetwork->IsUserOnline() == false) {
+#if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR >= 2
+			CString sCleanMessage = sMessage.StripControls();
+#else
+			CString &sCleanMessage = sMessage;
+#endif
+
 			for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
 					it != m_vDevices.end(); ++it)
 			{
@@ -826,18 +832,18 @@ public:
 					bool bMention = (
 						((pChannel == NULL) || device.HasMentionChannel(pChannel->GetName())) ||
 						device.HasMentionNick(Nick.GetNick()) ||
-						device.IncludesMentionKeyword(sMessage, m_pNetwork->GetIRCNick().GetNick()));
+						device.IncludesMentionKeyword(sCleanMessage, m_pNetwork->GetIRCNick().GetNick()));
 
 					if (bMention && (
 							(pChannel && device.HasIgnoreChannel(pChannel->GetName())) ||
 							device.HasIgnoreNick(Nick.GetNick()) ||
-							device.IncludesIgnoreKeyword(sMessage)))
+							device.IncludesIgnoreKeyword(sCleanMessage)))
 					{
 						bMention = false;
 					}
 
 					if (bMention) {
-						device.SendNotification(*this, Nick.GetNick(), sMessage, pChannel);
+						device.SendNotification(*this, Nick.GetNick(), sCleanMessage, pChannel);
 					}
 				}
 			}
