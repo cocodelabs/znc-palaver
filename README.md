@@ -2,15 +2,36 @@
 
 Palaver ZNC module provides push notifications.
 
+## Download
+
+#### Via Git
+
+```bash
+$ git clone https://github.com/Palaver/znc-palaver
+$ cd znc-palaver
+```
+
+#### Via wget
+
+```bash
+$ wget https://github.com/Palaver/znc-palaver/archive/master.zip
+$ unzip master.zip
+$ cd znc-palaver-master
+```
+
 ## Compiling
 
-    make
+```bash
+$ make
+```
 
 ## Installation
 
 Copy the compile ZNC module to your ZNC settings:
 
-    $ cp palaver.so ~/.znc/modules
+```bash
+$ cp palaver.so ~/.znc/modules
+```
 
 Now load the ZNC module:
 
