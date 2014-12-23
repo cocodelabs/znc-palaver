@@ -1,4 +1,4 @@
-CXXFLAGS := -Wno-unknown-pragmas
+CXXFLAGS := -Wno-unknown-pragmas -std=c++11
 PALAVER_VERSION := $(shell git describe --tags --always --dirty 2> /dev/null)
 
 ifneq "$(PALAVER_VERSION)" ""
