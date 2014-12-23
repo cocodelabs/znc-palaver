@@ -7,6 +7,13 @@
 
 #define REQUIRESSL
 
+#if defined(__has_include)
+#if __has_include(<regex>)
+#define HAS_REGEX
+#include <regex>
+#endif
+#endif
+
 #include <znc/Modules.h>
 #include <znc/User.h>
 #include <znc/IRCNetwork.h>
@@ -29,6 +36,27 @@ const char *kPLVMentionNickKey = "MENTION-NICK";
 const char *kPLVIgnoreKeywordKey = "IGNORE-KEYWORD";
 const char *kPLVIgnoreChannelKey = "IGNORE-CHANNEL";
 const char *kPLVIgnoreNickKey = "IGNORE-NICK";
+
+
+#ifdef HAS_REGEX
+/// Escape all non-alphanumeric characters or special characters in pattern.
+CString re_escape(const CString& sString) {
+	CString sEscaped;
+
+	for (const char& character : sString) {
+		if (isalpha(character) || isdigit(character)) {
+			sEscaped += character;
+		} else if (character == '\x00') {
+			sEscaped += "\\000";
+		} else {
+			sEscaped += "\\";
+			sEscaped += character;
+		}
+	}
+
+	return sEscaped;
+}
+#endif
 
 
 typedef enum {
@@ -396,17 +424,29 @@ public:
 
 		for (VCString::const_iterator it = m_vMentionKeywords.begin();
 				it != m_vMentionKeywords.end(); ++it) {
-			const CString& sKeyword = *it;
+			CString sKeyword = *it;
 
 			if (sKeyword.Equals("{nick}")) {
-				if (sMessage.find(sNick) != std::string::npos) {
-					bResult = true;
-					break;
-				}
-			} else if (sMessage.find(sKeyword) != std::string::npos) {
+				sKeyword = sNick;
+			}
+
+#ifdef HAS_REGEX
+			std::smatch match;
+			std::regex expression = std::regex("\\b" + re_escape(sKeyword) + "\\b",
+					std::regex_constants::ECMAScript | std::regex_constants::icase);
+
+			std::regex_search(sMessage, match, expression);
+
+			if (!match.empty()) {
 				bResult = true;
 				break;
 			}
+#else
+			if (sMessage.find(sKeyword) != std::string::npos) {
+				bResult = true;
+				break;
+			}
+#endif
 		}
 
 		return bResult;
