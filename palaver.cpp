@@ -31,9 +31,20 @@ const char *kPLVIgnoreChannelKey = "IGNORE-CHANNEL";
 const char *kPLVIgnoreNickKey = "IGNORE-NICK";
 
 
+typedef enum {
+	StatusLine = 0,
+	Headers = 1,
+	Body = 2,
+	Closed = 3,
+} EPLVHTTPSocketState;
+
 class PLVHTTPSocket : public CSocket {
+	EPLVHTTPSocketState m_eState;
+
 public:
 	PLVHTTPSocket(CModule *pModule, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : CSocket(pModule) {
+		m_eState = StatusLine;
+
 		unsigned short uPort = 80;
 
 		CString sScheme = sURL.Token(0, false, "://");
@@ -66,6 +77,7 @@ public:
 		DEBUG("Palaver: Connecting to '" << sHostname << "' on port " << uPort << (useSSL ? " with" : " without") << " TLS (" << sMethod << " " << sPath << ")");
 
 		Connect(sHostname, uPort, useSSL);
+		EnableReadLine();
 		Write(sMethod + " " + sPath + " HTTP/1.1\r\n");
 		Write("Host: " + sHostname + "\r\n");
 
@@ -83,6 +95,45 @@ public:
 		}
 
 		Close(Csock::CLT_AFTERWRITE);
+	}
+
+	void ReadLine(const CString& sData) {
+		CString sLine = sData;
+		sLine.TrimRight("\r\n");
+
+		switch (m_eState) {
+			case StatusLine: {
+				CString sStatus = sLine.Token(1);
+				unsigned int uStatus = sStatus.ToUInt();
+
+				if (uStatus < 200 || uStatus > 299) {
+					DEBUG("Palaver: Received HTTP Response code: " << uStatus);
+				}
+
+				m_eState = Headers;
+				break;
+			}
+
+			case Headers: {
+				if (sLine.empty()) {
+					m_eState = Body;
+				}
+
+				break;
+			}
+
+			case Body: {
+				break;
+			}
+
+			case Closed: {
+				 break;
+			 }
+		}
+	}
+
+	void Disconnected() {
+		Close(CSocket::CLT_AFTERWRITE);
 	}
 };
 
