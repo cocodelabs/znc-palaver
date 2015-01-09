@@ -1,16 +1,30 @@
 # Palaver ZNC Module
 
-Palaver ZNC module provides push notifications.
+Palaver ZNC module provides push notifications. This `away` branch will notify you even if you are not marked as `/away`.
+
+## Download
+
+#### Via Git
+
+```bash
+$ git clone https://github.com/Palaver/znc-palaver
+$ cd znc-palaver
+$ git checkout away
+```
 
 ## Compiling
 
-    make
+```bash
+$ make
+```
 
 ## Installation
 
 Copy the compile ZNC module to your ZNC settings:
 
-    $ cp palaver.so ~/.znc/modules
+```bash
+$ cp palaver.so ~/.znc/modules
+```
 
 Now load the ZNC module:
 
@@ -24,7 +38,5 @@ You will be mentioned when any of the following rules are met:
 * Any message which includes your current nickname.
 * A message contains a mention keyword from the mention keywords in `Settings > Mentions`
 
-Notifications will only be sent if all your clients are disconnected, or marked
-as away. You can use the [clientaway](http://wiki.znc.in/Clientaway) module to
-mark a connected client as away.
+Notifications will be sent even if you are not marked as away.
 
