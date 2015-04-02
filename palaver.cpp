@@ -953,6 +953,16 @@ public:
 		return CONTINUE;
 	}
 
+	virtual EModRet OnChanNotice(CNick& Nick, CChan& Channel, CString& sMessage) {
+		ParseMessage(Nick, sMessage, &Channel);
+		return CONTINUE;
+	}
+
+	virtual EModRet OnPrivNotice(CNick& Nick, CString& sMessage) {
+		ParseMessage(Nick, sMessage, NULL);
+		return CONTINUE;
+	}
+
 #pragma mark - Commands
 
 	void HandleTestCommand(const CString& sLine) {
