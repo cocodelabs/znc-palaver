@@ -98,7 +98,7 @@ public:
 		mcsHeaders["Connection"] = "close";
 		mcsHeaders["User-Agent"] = "ZNC";
 
-		if (sMethod.Equals("GET") == false) {
+		if (sMethod.Equals("GET") == false || sContent.length() > 0) {
 			mcsHeaders["Content-Length"] = CString(sContent.length());
 		}
 
