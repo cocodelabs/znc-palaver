@@ -1,7 +1,7 @@
 /*
  * ZNC Palaver Module
  *
- * Copyright (c) 2013 Kyle Fuller
+ * Copyright (c) 2013-2015 Cocode LTD
  * License under the MIT license
  */
 
