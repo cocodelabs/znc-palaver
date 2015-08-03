@@ -1,5 +1,7 @@
 # Palaver ZNC Module
 
+[![Build Status](https://img.shields.io/circleci/project/cocodelabs/znc-palaver/master.svg)](https://circleci.com/gh/cocodelabs/znc-palaver)
+
 Palaver ZNC module provides push notifications.
 
 ## Download
