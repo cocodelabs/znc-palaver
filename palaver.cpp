@@ -81,7 +81,7 @@ public:
 		CString sTemp = sURL.Token(1, true, "://");
 		CString sAddress = sTemp.Token(0, false, "/");
 
-		CString sHostname = sAddress.Token(0, false, ":");
+		m_sHostname = sAddress.Token(0, false, ":");
 		CString sPort = sAddress.Token(1, true, ":");
 		CString sPath = "/" + sTemp.Token(1, true, "/");
 
@@ -104,12 +104,12 @@ public:
 
 		bool useSSL = sScheme.Equals("https");
 
-		DEBUG("Palaver: Connecting to '" << sHostname << "' on port " << uPort << (useSSL ? " with" : " without") << " TLS (" << sMethod << " " << sPath << ")");
+		DEBUG("Palaver: Connecting to '" << m_sHostname << "' on port " << uPort << (useSSL ? " with" : " without") << " TLS (" << sMethod << " " << sPath << ")");
 
-		Connect(sHostname, uPort, useSSL);
+		Connect(m_sHostname, uPort, useSSL);
 		EnableReadLine();
 		Write(sMethod + " " + sPath + " HTTP/1.1\r\n");
-		Write("Host: " + sHostname + "\r\n");
+		Write("Host: " + m_sHostname + "\r\n");
 
 		for (MCString::const_iterator it = mcsHeaders.begin(); it != mcsHeaders.end(); ++it) {
 			const CString &sKey = it->first;
@@ -165,6 +165,14 @@ public:
 	void Disconnected() {
 		Close(CSocket::CLT_AFTERWRITE);
 	}
+
+	virtual bool SNIConfigureClient(CS_STRING &sHostname) {
+		sHostname = m_sHostname;
+		return true;
+	}
+
+private:
+	CString m_sHostname;
 };
 
 class CDevice {
