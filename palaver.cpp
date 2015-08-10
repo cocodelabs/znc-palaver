@@ -24,6 +24,14 @@
 #endif
 #endif
 
+#if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR < 6
+#define CSOCKET_DOES_NOT_HAVE_SNI_CONFIGURATION
+
+static int PalaverSNICallBack(SSL *pSSL, int *piAD, void *pData) {
+
+}
+#endif
+
 #ifndef PALAVER_VERSION
 	#define PALAVER_VERSION "unknown"
 #endif
@@ -73,8 +81,6 @@ class PLVHTTPSocket : public CSocket {
 
 public:
 	PLVHTTPSocket(CModule *pModule, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : CSocket(pModule) {
-		SetSSLMethod(TLS12);
-
 		m_eState = StatusLine;
 
 		unsigned short uPort = 80;
@@ -172,6 +178,12 @@ public:
 		sHostname = m_sHostname;
 		return true;
 	}
+
+#ifdef CSOCKET_DOES_NOT_HAVE_SNI_CONFIGURATION
+	bool AcceptSSL() {
+		return CSocket::AcceptSSL();
+	}
+#endif
 
 private:
 	CString m_sHostname;
