@@ -29,6 +29,11 @@
 #endif
 
 
+#if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR < 6
+	#error "Palaver ZNC Modules requires ZNC 1.6 or newer."
+#endif
+
+
 const char *kPLVCapability = "palaverapp.com";
 const char *kPLVCommand = "PALAVER";
 const char *kPLVPushEndpointKey = "PUSH-ENDPOINT";
