@@ -28,7 +28,11 @@
 #define CSOCKET_DOES_NOT_HAVE_SNI_CONFIGURATION
 
 static int PalaverSNICallBack(SSL *pSSL, int *piAD, void *pData) {
+	if (!pSSL || !pData) {
+		return SSL_TLSEXT_ERR_NOACK;
+	}
 
+	PLVHTTPSocket *pSock = static_cast<PLVHTTPSocket *>(pData);
 }
 #endif
 
@@ -180,8 +184,14 @@ public:
 	}
 
 #ifdef CSOCKET_DOES_NOT_HAVE_SNI_CONFIGURATION
-	bool AcceptSSL() {
-		return CSocket::AcceptSSL();
+	bool SSLClientSetup() {
+		bool result = CSocket::SSLClientSetup();
+
+		if (result) {
+			SSL_set_tlsext_host_name(GetSSLObject(), m_pHostname.c_str());
+		}
+
+		return result;
 	}
 #endif
 
