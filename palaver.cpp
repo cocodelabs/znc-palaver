@@ -26,14 +26,6 @@
 
 #if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR < 6
 #define CSOCKET_DOES_NOT_HAVE_SNI_CONFIGURATION
-
-static int PalaverSNICallBack(SSL *pSSL, int *piAD, void *pData) {
-	if (!pSSL || !pData) {
-		return SSL_TLSEXT_ERR_NOACK;
-	}
-
-	PLVHTTPSocket *pSock = static_cast<PLVHTTPSocket *>(pData);
-}
 #endif
 
 #ifndef PALAVER_VERSION
