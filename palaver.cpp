@@ -143,6 +143,8 @@ public:
 
 				if (uStatus < 200 || uStatus > 299) {
 					DEBUG("Palaver: Received HTTP Response code: " << uStatus);
+				} else {
+					DEBUG("Palaver: Successfully send notification ('" << uStatus << "')");
 				}
 
 				m_eState = Headers;
@@ -169,6 +171,18 @@ public:
 
 	void Disconnected() {
 		Close(CSocket::CLT_AFTERWRITE);
+	}
+
+	void Timeout() {
+		DEBUG("Palaver: HTTP Request timed out '" << m_sHostname << "'");
+	}
+
+	void ConnectionRefused() {
+		DEBUG("Palaver: Connection refused to '" << m_sHostname << "'");
+	}
+
+	virtual void SockError(int iErrno, const CString &sDescription) {
+		DEBUG("Palaver: HTTP Request failed '" << m_sHostname << "' - " << sDescription);
 	}
 
 	virtual bool SNIConfigureClient(CS_STRING &sHostname) {
