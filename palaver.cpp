@@ -128,8 +128,6 @@ public:
 		if (sContent.length() > 0) {
 			Write(sContent);
 		}
-
-		Close(Csock::CLT_AFTERWRITE);
 	}
 
 	void ReadLine(const CString& sData) {
@@ -160,11 +158,13 @@ public:
 			}
 
 			case Body: {
+				Close(Csock::CLT_AFTERWRITE);
 				break;
 			}
 
 			case Closed: {
-				 break;
+				Close(Csock::CLT_AFTERWRITE);
+				break;
 			 }
 		}
 	}
