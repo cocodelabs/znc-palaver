@@ -10,6 +10,7 @@ palaver.so: palaver.cpp
 
 install: palaver.so
 	@echo "Installing palaver.so to $(HOME)/.znc/modules/palaver.so"
+	@mkdir -p $(HOME)/.znc/modules
 	@cp palaver.so $(HOME)/.znc/modules/palaver.so
 
 clean:
