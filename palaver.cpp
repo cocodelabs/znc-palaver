@@ -233,9 +233,8 @@ public:
 	bool HasClient(const CClient& client) const {
 		bool bHasClient = false;
 
-		for (std::vector<CClient*>::const_iterator it = m_vClients.begin();
-				it != m_vClients.end(); ++it) {
-			CClient *pCurrentClient = *it;
+		for (std::map<CClient*, CString>::const_iterator it = m_mClientNetworkIDs.begin(); it != m_mClientNetworkIDs.end(); ++it) {
+			CClient *pCurrentClient = it->first;
 
 			if (&client == pCurrentClient) {
 				bHasClient = true;
@@ -246,37 +245,48 @@ public:
 		return bHasClient;
 	}
 
-	void AddClient(CClient& client) {
+	void AddClient(CClient &client, const CString& sNetworkID) {
 		if (HasClient(client) == false) {
-			m_vClients.push_back(&client);
+			m_mClientNetworkIDs[&client] = sNetworkID;
 		}
 	}
 
 	void RemoveClient(const CClient& client) {
-		for (std::vector<CClient*>::iterator it = m_vClients.begin();
-				it != m_vClients.end(); ++it) {
-			CClient *pCurrentClient = *it;
+		for (std::map<CClient*, CString>::iterator it = m_mClientNetworkIDs.begin(); it != m_mClientNetworkIDs.end(); ++it) {
+			CClient *pCurrentClient = it->first;
 
 			if (&client == pCurrentClient) {
-				m_vClients.erase(it);
+				m_mClientNetworkIDs.erase(it);
 				break;
 			}
 		}
 	}
 
-	bool AddNetwork(CIRCNetwork& network) {
-		return AddNetworkNamed(network.GetUser()->GetUserName(), network.GetName());
+	const CString GetNetworkID(const CClient &client) const {
+		for (std::map<CClient*, CString>::const_iterator it = m_mClientNetworkIDs.begin(); it != m_mClientNetworkIDs.end(); ++it) {
+			CClient *pCurrentClient = it->first;
+
+			if (&client == pCurrentClient) {
+				return it->second;
+			}
+		}
+
+		return CString();
+	}
+
+	bool AddNetwork(const CIRCNetwork& network, const CString& sNetworkID) {
+		return AddNetworkNamed(network.GetUser()->GetUserName(), network.GetName(), sNetworkID);
 	}
 
 	bool HasNetworkNamed(const CString& sUsername, const CString& sNetwork) const {
 		bool bHasNetwork = false;
 
-		std::map<CString, VCString>::const_iterator it = m_msvsNetworks.find(sUsername);
-		if (it != m_msvsNetworks.end()) {
-			const VCString& vNetworks = it->second;
+		std::map<CString, MCString>::const_iterator it = m_msmsNetworks.find(sUsername);
+		if (it != m_msmsNetworks.end()) {
+			const MCString& mNetworks = it->second;
 
-			for (VCString::const_iterator it2 = vNetworks.begin(); it2 != vNetworks.end(); ++it2) {
-				const CString &name = *it2;
+			for (MCString::const_iterator it2 = mNetworks.begin(); it2 != mNetworks.end(); ++it2) {
+				const CString &name = it2->first;
 
 				if (name.Equals(sNetwork)) {
 					bHasNetwork = true;
@@ -288,11 +298,11 @@ public:
 		return bHasNetwork;
 	}
 
-	bool AddNetworkNamed(const CString& sUsername, const CString& sNetwork) {
+	bool AddNetworkNamed(const CString& sUsername, const CString& sNetwork, const CString& sNetworkID) {
 		bool bDidAddNetwork = false;
 
 		if (HasNetworkNamed(sUsername, sNetwork) == false) {
-			m_msvsNetworks[sUsername].push_back(sNetwork);
+			m_msmsNetworks[sUsername][sNetwork] = sNetworkID;
 			bDidAddNetwork = true;
 		}
 
@@ -303,12 +313,12 @@ public:
 		const CUser *user = network.GetUser();
 		const CString& sUsername = user->GetUserName();
 
-		std::map<CString, VCString>::iterator it = m_msvsNetworks.find(sUsername);
-		if (it != m_msvsNetworks.end()) {
-			VCString &networks = it->second;
+		std::map<CString, MCString>::iterator it = m_msmsNetworks.find(sUsername);
+		if (it != m_msmsNetworks.end()) {
+			MCString &networks = it->second;
 
-			for (VCString::iterator it2 = networks.begin(); it2 != networks.end(); ++it2) {
-				CString &name = *it2;
+			for (MCString::iterator it2 = networks.begin(); it2 != networks.end(); ++it2) {
+				const CString &name = it2->first;
 
 				if (name.Equals(network.GetName())) {
 					networks.erase(it2);
@@ -317,7 +327,7 @@ public:
 			}
 
 			if (networks.empty()) {
-				m_msvsNetworks.erase(it);
+				m_msmsNetworks.erase(it);
 			}
 		}
 	}
@@ -328,12 +338,12 @@ public:
 		const CUser *user = network.GetUser();
 		const CString& sUsername = user->GetUserName();
 
-		std::map<CString, VCString>::iterator it = m_msvsNetworks.find(sUsername);
-		if (it != m_msvsNetworks.end()) {
-			VCString &networks = it->second;
+		std::map<CString, MCString>::const_iterator it = m_msmsNetworks.find(sUsername);
+		if (it != m_msmsNetworks.end()) {
+			const MCString &networks = it->second;
 
-			for (VCString::iterator it2 = networks.begin(); it2 != networks.end(); ++it2) {
-				CString &name = *it2;
+			for (MCString::const_iterator it2 = networks.begin(); it2 != networks.end(); ++it2) {
+				const CString &name = it2->first;
 
 				if (name.Equals(network.GetName())) {
 					hasNetwork = true;
@@ -343,6 +353,24 @@ public:
 		}
 
 		return hasNetwork;
+	}
+
+	const CString GetNetworkID(const CIRCNetwork& network) const {
+		const CString sUsername = network.GetUser()->GetUserName();
+		std::map<CString, MCString>::const_iterator it = m_msmsNetworks.find(sUsername);
+		if (it != m_msmsNetworks.end()) {
+			const MCString &networks = it->second;
+
+			for (MCString::const_iterator it2 = networks.begin(); it2 != networks.end(); ++it2) {
+				const CString &name = it2->first;
+
+				if (name.Equals(network.GetName())) {
+					return it2->second;
+				}
+			}
+		}
+
+		return "";
 	}
 
 	void ResetDevice() {
@@ -532,10 +560,12 @@ public:
 			} else if (sKey.Equals(kPLVMentionNickKey)) {
 				AddMentionNick(sValue);
 			} else if (sKey.Equals("NETWORK")) {
+				// Only from config file
 				CString sUsername = sValue.Token(0);
 				CString sNetwork = sValue.Token(1);
+				CString sNetworkID = sValue.Token(2);
 
-				AddNetworkNamed(sUsername, sNetwork);
+				AddNetworkNamed(sUsername, sNetwork, sNetworkID);
 			}
 		} else if (sCommand.Equals("END")) {
 			SetInNegotiation(false);
@@ -595,16 +625,16 @@ public:
 			File.Write("ADD " + CString(kPLVIgnoreNickKey) + " " + sNick + "\n");
 		}
 
-		for (std::map<CString, VCString>::const_iterator it = m_msvsNetworks.begin();
-				it != m_msvsNetworks.end(); ++it) {
+		for (std::map<CString, MCString>::const_iterator it = m_msmsNetworks.begin(); it != m_msmsNetworks.end(); ++it) {
 			const CString& sUsername = it->first;
-			const VCString& networks = it->second;
+			const MCString& networks = it->second;
 
-			for (VCString::const_iterator it2 = networks.begin();
+			for (MCString::const_iterator it2 = networks.begin();
 					it2 != networks.end(); ++it2) {
-				const CString& sNetwork = *it2;
+				const CString& sNetwork = it2->first;
+				const CString& sNetworkID = it2->second;
 
-				File.Write("ADD NETWORK " + sUsername + " " + sNetwork + "\n");
+				File.Write("ADD NETWORK " + sUsername + " " + sNetwork + " " + sNetworkID + "\n");
 			}
 		}
 
@@ -628,6 +658,10 @@ public:
 		if (pChannel) {
 			sJSON += ",\"channel\": \"" + pChannel->GetName().Replace_n("\"", "\\\"") + "\"";
 		}
+		if (module.GetNetwork()) {
+			const CString sNetworkID = GetNetworkID(*module.GetNetwork());
+			sJSON += ",\"network\": \"" + sNetworkID.Replace_n("\"", "\\\"") + "\"";
+		}
 		sJSON += "}";
 
 		PLVHTTPSocket *pSocket = new PLVHTTPSocket(&module, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
@@ -650,8 +684,8 @@ public:
 		}
 	}
 
-	std::map<CString, VCString> GetNetworks() const {
-		return m_msvsNetworks;
+	std::map<CString, MCString> GetNetworks() const {
+		return m_msmsNetworks;
 	}
 
 private:
@@ -659,9 +693,10 @@ private:
 	CString m_sVersion;
 	CString m_sPushEndpoint;
 
-	std::map<CString, VCString> m_msvsNetworks;
+	std::map<CString, MCString> m_msmsNetworks;
 
-	std::vector<CClient*> m_vClients;
+	// Connected clients along with the clients network ID
+	std::map<CClient*, CString> m_mClientNetworkIDs;
 
 	VCString m_vMentionKeywords;
 	VCString m_vMentionChannels;
@@ -729,6 +764,7 @@ public:
 
 				CString sToken = sLine.Token(2);
 				CString sVersion = sLine.Token(3);
+				CString sNetworkID = sLine.Token(4);
 
 				CDevice& device = DeviceWithToken(sToken);
 
@@ -737,24 +773,32 @@ public:
 					device.SetInNegotiation(true);
 				}
 
-				device.AddClient(*pClient);
+				device.AddClient(*pClient, sNetworkID);
 
 				CIRCNetwork *pNetwork = pClient->GetNetwork();
 				if (pNetwork) {
-					if (device.AddNetwork(*pNetwork) && device.InNegotiation() == false) {
+					if (device.AddNetwork(*pNetwork, sNetworkID) && device.InNegotiation() == false) {
 						Save();
 					}
 				}
 			} else if (sCommand.Equals("BEGIN")) {
+				CDevice *pDevice = DeviceForClient(*pClient);
+				if (pDevice == NULL) {
+					// BEGIN before we received an client identification
+					return HALT;
+				}
+
 				CString sToken = sLine.Token(2);
 				CString sVersion = sLine.Token(3);
-				CDevice& device = DeviceWithToken(sToken);
 
-				device.ResetDevice();
-				device.SetInNegotiation(true);
-				device.SetVersion(sVersion);
+				if (!pDevice->GetToken().Equals(sToken)) {
+					// Setting was for a different device than the one the user registered with
+					return HALT;
+				}
 
-				device.AddClient(*pClient);
+				pDevice->ResetDevice();
+				pDevice->SetInNegotiation(true);
+				pDevice->SetVersion(sVersion);
 			} else if (sCommand.Equals("SET") || sCommand.Equals("ADD") || sCommand.Equals("END")) {
 				CDevice *pDevice = DeviceForClient(*pClient);
 
@@ -779,7 +823,8 @@ public:
 		// Associate client with the user/network
 		CDevice *pDevice = DeviceForClient(*m_pClient);
 		if (pDevice && m_pNetwork) {
-			if (pDevice->AddNetwork(*m_pNetwork)) {
+			const CString sNetworkID = pDevice->GetNetworkID(*m_pClient);
+			if (pDevice->AddNetwork(*m_pNetwork, sNetworkID)) {
 				Save();
 			}
 		}
@@ -1031,14 +1076,14 @@ public:
 		{
 			CDevice &device = **it;
 
-			const std::map<CString, VCString> msvsNetworks = device.GetNetworks();
-			std::map<CString, VCString>::const_iterator it2 = msvsNetworks.begin();
-			for (;it2 != msvsNetworks.end(); ++it2) {
+			const std::map<CString, MCString> msmsNetworks = device.GetNetworks();
+			std::map<CString, MCString>::const_iterator it2 = msmsNetworks.begin();
+			for (;it2 != msmsNetworks.end(); ++it2) {
 				const CString sUsername = it2->first;
-				const VCString &networks = it2->second;
+				const MCString &networks = it2->second;
 
-				for (VCString::const_iterator it3 = networks.begin(); it3 != networks.end(); ++it3) {
-					const CString sNetwork = *it3;
+				for (MCString::const_iterator it3 = networks.begin(); it3 != networks.end(); ++it3) {
+					const CString sNetwork = it3->first;
 
 					Table.AddRow();
 					Table.SetCell("Device", device.GetToken());
@@ -1056,7 +1101,7 @@ public:
 				}
 			}
 
-			if (msvsNetworks.size() == 0) {
+			if (msmsNetworks.size() == 0) {
 				Table.AddRow();
 				Table.SetCell("Device", device.GetToken());
 				Table.SetCell("User", "");
