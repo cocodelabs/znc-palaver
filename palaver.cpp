@@ -16,12 +16,8 @@
 #include <znc/FileUtils.h>
 
 #if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR >= 5
-#if defined(__has_include)
-#if __has_include(<regex>)
 #define HAS_REGEX
 #include <regex>
-#endif
-#endif
 #endif
 
 #ifndef PALAVER_VERSION
