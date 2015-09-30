@@ -1,5 +1,5 @@
 CXXFLAGS := -Wno-unknown-pragmas
-PALAVER_VERSION := $(shell git describe --tags --always --dirty 2> /dev/null)
+PALAVER_VERSION := $(shell git describe --tags --always --dirty 2> /dev/null || cat VERSION)
 
 ifneq "$(PALAVER_VERSION)" ""
 	CXXFLAGS += -DPALAVER_VERSION=\"$(PALAVER_VERSION)\"
