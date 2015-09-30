@@ -7,6 +7,10 @@
 
 #define REQUIRESSL
 
+#ifndef PALAVER_VERSION
+	#error "Please follow the installation instructions in the README."
+#endif
+
 
 #include <znc/Modules.h>
 #include <znc/User.h>
@@ -18,10 +22,6 @@
 #if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR >= 5
 #define HAS_REGEX
 #include <regex>
-#endif
-
-#ifndef PALAVER_VERSION
-	#define PALAVER_VERSION "unknown"
 #endif
 
 
