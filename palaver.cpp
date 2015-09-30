@@ -494,6 +494,14 @@ public:
 				bResult = true;
 				break;
 			}
+
+			// If that didn't match, and the keyword contains a word boundary
+			if (!bResult && (sKeyword.find("[") != std::string::npos || sKeyword.find("]") != std::string::npos)) {
+				if (sMessage.find(sKeyword) != std::string::npos) {
+					bResult = true;
+					break;
+				}
+			}
 #else
 			if (sMessage.find(sKeyword) != std::string::npos) {
 				bResult = true;
