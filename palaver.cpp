@@ -485,10 +485,15 @@ public:
 
 #ifdef HAS_REGEX
 			std::smatch match;
-			std::regex expression = std::regex("\\b" + re_escape(sKeyword) + "\\b",
-					std::regex_constants::ECMAScript | std::regex_constants::icase);
+			CString sExpression = "\\b" + re_escape(sKeyword) + "\\b";
 
-			std::regex_search(sMessage, match, expression);
+			try {
+				std::regex expression = std::regex(sExpression,
+					std::regex_constants::ECMAScript | std::regex_constants::icase);
+				std::regex_search(sMessage, match, expression);
+			} catch (std::regex_error& error) {
+				DEBUG("Caught regex error '" << error.code() << "' from '" << sExpression << "'.");
+			}
 
 			if (!match.empty()) {
 				bResult = true;
