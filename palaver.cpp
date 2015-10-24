@@ -992,7 +992,7 @@ public:
 	void ParseMessage(CNick& Nick, CString& sMessage, CChan *pChannel = NULL) {
 		if (m_pNetwork->IsUserOnline() == false) {
 #if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR >= 2
-			CString sCleanMessage = sMessage.StripControls();
+			CString sCleanMessage = sMessage.StripControls_n();
 #else
 			CString &sCleanMessage = sMessage;
 #endif
