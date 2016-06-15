@@ -98,3 +98,10 @@ To solve this problem you can force IPv4 connections in ZNC using:
 ```
 /msg *status setbindhost 0.0.0.0
 ```
+
+###### Caught regex error
+
+This error indicates a problem with the C++ regex implementation in your C++
+compiler. Older versions of GCC have buggy implementations of regex and are
+incompatible with the module. GCC 4.9 or newer, and Clang are known to work.
+Please upgrade to a modern version.
