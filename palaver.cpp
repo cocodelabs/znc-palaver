@@ -652,7 +652,7 @@ public:
 
 #pragma mark - Notifications
 
-	void SendNotification(CModule& module, const CString& sSender, const CString& sNotification, const CChan *pChannel) {
+	void SendNotification(CModule& module, const CString& sSender, const CString& sNotification, const CChan *pChannel, CString sIntent = "") {
 		++m_uiBadge;
 
 		MCString mcsHeaders;
@@ -670,6 +670,9 @@ public:
 		if (module.GetNetwork()) {
 			const CString sNetworkID = GetNetworkID(*module.GetNetwork());
 			sJSON += ",\"network\": \"" + sNetworkID.Replace_n("\"", "\\\"") + "\"";
+		}
+		if (!sIntent.empty()) {
+			sJSON += ",\"intent\": \"" + sIntent + "\"";
 		}
 		sJSON += "}";
 
@@ -989,7 +992,7 @@ public:
 
 #pragma mark -
 
-	void ParseMessage(CNick& Nick, CString& sMessage, CChan *pChannel = NULL) {
+	void ParseMessage(CNick& Nick, CString& sMessage, CChan *pChannel = NULL, CString sIntent = "") {
 		if (m_pNetwork->IsUserOnline() == false) {
 #if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR >= 2
 			CString sCleanMessage = sMessage.StripControls_n();
@@ -1017,7 +1020,7 @@ public:
 					}
 
 					if (bMention) {
-						device.SendNotification(*this, Nick.GetNick(), sCleanMessage, pChannel);
+						device.SendNotification(*this, Nick.GetNick(), sCleanMessage, pChannel, sIntent);
 					}
 				}
 			}
@@ -1026,6 +1029,11 @@ public:
 
 	virtual EModRet OnChanMsg(CNick& Nick, CChan& Channel, CString& sMessage) {
 		ParseMessage(Nick, sMessage, &Channel);
+		return CONTINUE;
+	}
+
+	virtual EModRet OnChanAction(CNick& Nick, CChan& Channel, CString& sMessage) {
+		ParseMessage(Nick, sMessage, &Channel, "ACTION");
 		return CONTINUE;
 	}
 
@@ -1041,6 +1049,11 @@ public:
 
 	virtual EModRet OnPrivNotice(CNick& Nick, CString& sMessage) {
 		ParseMessage(Nick, sMessage, NULL);
+		return CONTINUE;
+	}
+
+	virtual EModRet OnPrivAction(CNick& Nick, CString& sMessage) {
+		ParseMessage(Nick, sMessage, NULL, "ACTION");
 		return CONTINUE;
 	}
 
