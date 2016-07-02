@@ -126,6 +126,10 @@ public:
 		}
 	}
 
+	virtual void HandleStatusCode(unsigned int status) {
+
+	}
+
 	void ReadLine(const CString& sData) {
 		CString sLine = sData;
 		sLine.TrimRight("\r\n");
@@ -140,6 +144,8 @@ public:
 				} else {
 					DEBUG("Palaver: Successfully send notification ('" << uStatus << "')");
 				}
+
+				HandleStatusCode(uStatus);
 
 				m_eState = Headers;
 				break;
@@ -188,6 +194,18 @@ public:
 
 private:
 	CString m_sHostname;
+};
+
+class PLVHTTPNotificationSocket : public PLVHTTPSocket {
+public:
+	PLVHTTPNotificationSocket(CModule *pModule, const CString &sToken, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : PLVHTTPSocket(pModule, sMethod, sURL, mcsHeaders, sContent) {
+		m_sToken = sToken;
+	}
+
+	virtual void HandleStatusCode(unsigned int status);
+
+private:
+	CString m_sToken;
 };
 
 class CDevice {
@@ -673,7 +691,7 @@ public:
 		}
 		sJSON += "}";
 
-		PLVHTTPSocket *pSocket = new PLVHTTPSocket(&module, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
+		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, GetToken(), "POST", GetPushEndpoint(), mcsHeaders, sJSON);
 		module.AddSocket(pSocket);
 	}
 
@@ -686,7 +704,7 @@ public:
 
 			CString sJSON = "{\"badge\": 0}";
 
-			PLVHTTPSocket *pSocket = new PLVHTTPSocket(&module, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
+			PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, GetToken(), "POST", GetPushEndpoint(), mcsHeaders, sJSON);
 			module.AddSocket(pSocket);
 
 			m_uiBadge = 0;
@@ -897,6 +915,21 @@ public:
 		}
 
 		return pDevice;
+	}
+
+	bool RemoveDeviceWithToken(const CString& sToken) {
+		for (std::vector<CDevice*>::iterator it = m_vDevices.begin();
+				it != m_vDevices.end(); ++it) {
+			CDevice& device = **it;
+
+			if (device.GetToken().Equals(sToken)) {
+				m_vDevices.erase(it);
+				Save();
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 #pragma mark - Serialization
@@ -1150,6 +1183,15 @@ private:
 
 	std::vector<CDevice*> m_vDevices;
 };
+
+void PLVHTTPNotificationSocket::HandleStatusCode(unsigned int status) {
+	if (status == 401) {
+		if (CPalaverMod *pModule = dynamic_cast<CPalaverMod *>(m_pModule)) {
+			DEBUG("palaver: Removing device");
+			pModule->RemoveDeviceWithToken(m_sToken);
+		}
+	}
+}
 
 template<> void TModInfo<CPalaverMod>(CModInfo& Info) {
 	Info.SetWikiPage("palaver");
