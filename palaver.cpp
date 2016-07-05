@@ -18,6 +18,7 @@
 #include <znc/Client.h>
 #include <znc/Chan.h>
 #include <znc/FileUtils.h>
+#include <znc/IRCSock.h>
 
 #if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR >= 5
 #define HAS_REGEX
@@ -1081,7 +1082,16 @@ public:
 	}
 
 	virtual EModRet OnPrivNotice(CNick& Nick, CString& sMessage) {
-		ParseMessage(Nick, sMessage, NULL);
+		const auto network = GetNetwork();
+
+		if (network) {
+			const auto sock = network->GetIRCSock();
+
+			if (sock && sock->IsAuthed()) {
+				ParseMessage(Nick, sMessage, NULL);
+			}
+		}
+
 		return CONTINUE;
 	}
 
