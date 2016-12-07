@@ -1045,6 +1045,9 @@ public:
 						device.HasMentionNick(Nick.GetNick()) ||
 						device.IncludesMentionKeyword(sCleanMessage, m_pNetwork->GetIRCNick().GetNick()));
 
+					sMessage.Replace("\x03","");
+					sMessage.Replace("\x0F","");
+
 					if (bMention && (
 							(pChannel && device.HasIgnoreChannel(pChannel->GetName())) ||
 							device.HasIgnoreNick(Nick.GetNick()) ||
