@@ -1085,20 +1085,6 @@ public:
 		return CONTINUE;
 	}
 
-	virtual EModRet OnPrivNotice(CNick& Nick, CString& sMessage) {
-		const auto network = GetNetwork();
-
-		if (network) {
-			const auto sock = network->GetIRCSock();
-
-			if (sock && sock->IsAuthed()) {
-				ParseMessage(Nick, sMessage, NULL);
-			}
-		}
-
-		return CONTINUE;
-	}
-
 	virtual EModRet OnPrivAction(CNick& Nick, CString& sMessage) {
 		ParseMessage(Nick, sMessage, NULL, "ACTION");
 		return CONTINUE;

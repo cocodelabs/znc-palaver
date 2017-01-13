@@ -17,6 +17,9 @@
   - Found your hostname
   - Got Ident response
 
+- We no longer mention you with private NOTICEs, these are usually server or
+  service notices and rarely from a real user.
+
 ### Bug Fixes
 
 - We now detect when building the module with an unsupported compiler and will
