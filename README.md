@@ -54,6 +54,7 @@ $ make
 Copy the compile ZNC module to your ZNC settings:
 
 ```bash
+$ mkdir -p ~/.znc/modules
 $ cp palaver.so ~/.znc/modules
 ```
 
