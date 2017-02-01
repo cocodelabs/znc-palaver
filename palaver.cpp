@@ -75,6 +75,8 @@ class PLVHTTPSocket : public CSocket {
 
 public:
 	PLVHTTPSocket(CModule *pModule, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : CSocket(pModule) {
+		SetSSLMethod(TLS12);
+
 		m_eState = StatusLine;
 
 		unsigned short uPort = 80;
