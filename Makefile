@@ -11,7 +11,7 @@ install: palaver.so
 	@cp palaver.so $(HOME)/.znc/modules/palaver.so
 
 clean:
-	-rm -f palaver.so
+	-rm -f palaver.so test-regex
 
 uninstall:
 	@echo "Uninstall palaver from $(HOME)/.znc/modules"
