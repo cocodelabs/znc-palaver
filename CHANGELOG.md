@@ -23,6 +23,7 @@
   now produce an error. This detects compilers that do not have a correct regex
   implementation.
 - Prevents stripping colour codes from messages incoming IRC messages.
+- ZNC will no longer send push notifications to backgrounded Palaver devices.
 
 
 ## 1.0.1

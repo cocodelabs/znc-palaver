@@ -1039,6 +1039,10 @@ public:
 			{
 				CDevice& device = **it;
 
+				if (m_pClient && device.HasClient(*m_pClient)) {
+					continue;
+				}
+
 				if (device.HasNetwork(*m_pNetwork)) {
 					bool bMention = (
 						((pChannel == NULL) || device.HasMentionChannel(pChannel->GetName())) ||
