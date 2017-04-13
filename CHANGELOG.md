@@ -20,6 +20,9 @@
 - We no longer mention you with private NOTICEs, these are usually server or
   service notices and rarely from a real user.
 
+- You can now disable showing message previews in the Palaver app which will
+  prevent the message contents from being sent as a push notification.
+
 ### Bug Fixes
 
 - We now detect when building the module with an unsupported compiler and will

@@ -40,6 +40,7 @@ const char *kPLVMentionNickKey = "MENTION-NICK";
 const char *kPLVIgnoreKeywordKey = "IGNORE-KEYWORD";
 const char *kPLVIgnoreChannelKey = "IGNORE-CHANNEL";
 const char *kPLVIgnoreNickKey = "IGNORE-NICK";
+const char *kPLVShowMessagePreviewKey = "SHOW-MESSAGE-PREVIEW";
 
 
 #ifdef HAS_REGEX
@@ -245,6 +246,14 @@ public:
 		return m_sPushEndpoint;
 	}
 
+	void SetShowMessagePreview(bool bShowMessagePreview) {
+		m_bShowMessagePreview = bShowMessagePreview;
+	}
+
+	bool GetShowMessagePreview() const {
+		return m_bShowMessagePreview;
+	}
+
 	bool HasClient(const CClient& client) const {
 		bool bHasClient = false;
 
@@ -392,6 +401,7 @@ public:
 		m_bInNegotiation = false;
 		m_sVersion = "";
 		m_sPushEndpoint = "";
+		m_bShowMessagePreview = true;
 
 		m_vMentionKeywords.clear();
 		m_vMentionChannels.clear();
@@ -570,6 +580,8 @@ public:
 				SetVersion(sValue);
 			} else if (sKey.Equals(kPLVPushEndpointKey)) {
 				SetPushEndpoint(sValue);
+			} else if (sKey.Equals(kPLVShowMessagePreviewKey)) {
+				SetShowMessagePreview(sValue.Equals("true"));
 			}
 		} else if (sCommand.Equals("ADD")) {
 			CString sKey = sLine.Token(1);
@@ -605,6 +617,12 @@ public:
 
 		if (GetVersion().empty() == false) {
 			File.Write("SET VERSION " + GetVersion() + "\n");
+		}
+
+		if (GetShowMessagePreview()) {
+			File.Write("SET " + CString(kPLVShowMessagePreviewKey) + " true\n");
+		} else {
+			File.Write("SET " + CString(kPLVShowMessagePreviewKey) + " false\n");
 		}
 
 		if (GetPushEndpoint().empty() == false) {
@@ -681,7 +699,13 @@ public:
 
 		CString sJSON = "{";
 		sJSON += "\"badge\": " + CString(m_uiBadge);
-		sJSON += ",\"message\": \"" + sNotification.Replace_n("\"", "\\\"") + "\"";
+
+		if (GetShowMessagePreview()) {
+			sJSON += ",\"message\": \"" + sNotification.Replace_n("\"", "\\\"") + "\"";
+		} else {
+			sJSON += ",\"private\": true";
+		}
+
 		sJSON += ",\"sender\": \"" + sSender.Replace_n("\"", "\\\"") + "\"";
 		if (pChannel) {
 			sJSON += ",\"channel\": \"" + pChannel->GetName().Replace_n("\"", "\\\"") + "\"";
@@ -737,6 +761,7 @@ private:
 	VCString m_vIgnoreChannels;
 	VCString m_vIgnoreNicks;
 
+	bool m_bShowMessagePreview;
 	bool m_bInNegotiation;
 	unsigned int m_uiBadge;
 };
