@@ -876,23 +876,25 @@ public:
 #pragma mark -
 
 	virtual void OnClientLogin() {
+		CIRCNetwork *pNetwork = GetClient()->GetNetwork();
+
 		// Associate client with the user/network
 		CDevice *pDevice = DeviceForClient(*m_pClient);
-		if (pDevice && m_pNetwork) {
+		if (pDevice && pNetwork) {
 			const CString sNetworkID = pDevice->GetNetworkID(*m_pClient);
-			if (pDevice->AddNetwork(*m_pNetwork, sNetworkID)) {
+			if (pDevice->AddNetwork(*pNetwork, sNetworkID)) {
 				Save();
 			}
 		}
 
-		if (m_pNetwork) {
+		if (pNetwork) {
 			// Let's reset any other devices for this client
 
 			for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
 					it != m_vDevices.end(); ++it) {
 				CDevice& device = **it;
 
-				if (device.HasClient(*m_pClient) == false && device.HasNetwork(*m_pNetwork)) {
+				if (device.HasClient(*m_pClient) == false && device.HasNetwork(*pNetwork)) {
 					device.ClearBadges(*this);
 				}
 			}
