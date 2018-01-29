@@ -18,7 +18,7 @@ uninstall:
 	-rm -f $(HOME)/.znc/modules/palaver.so
 
 test-regex: test-regex.cpp
-	@$(CC) -std=c++11 test-regex.cpp -o test-regex
+	@$(CXX) -std=c++11 test-regex.cpp -o test-regex
 
 .PHONY: test
 test: test-regex
