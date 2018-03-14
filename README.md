@@ -1,5 +1,5 @@
 ---
-Latest Version: 1.1.0
+Latest Version: 1.1.1
 ---
 
 # Palaver ZNC Module

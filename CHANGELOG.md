@@ -1,5 +1,12 @@
 # Changelog for Palaver ZNC Module
 
+## 1.1.1
+
+### Bug Fixes
+
+- Compilation will now respect the `CXX` environment variable so that Palaver
+  ZNC will be tested against the configured compiler.
+
 ## 1.1.0
 
 ### Enhancements
