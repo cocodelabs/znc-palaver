@@ -1,5 +1,12 @@
 # Changelog for Palaver ZNC Module
 
+## Master
+
+### Bug Fixes
+
+- Prevents a case where ZNC would send a push notification to connected Palaver
+  clients causing duplication of notifications (local + remote notifications).
+
 ## 1.1.1
 
 ### Bug Fixes

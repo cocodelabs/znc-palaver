@@ -1053,6 +1053,16 @@ public:
 
 #pragma mark -
 
+	bool IsDeviceConnected(const CDevice& device) const {
+		for (const auto client : GetNetwork()->GetClients()) {
+			if (device.HasClient(*client)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	void ParseMessage(CNick& Nick, CString& sMessage, CChan *pChannel = NULL, CString sIntent = "") {
 		if (m_pNetwork->IsUserOnline() == false) {
 #if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR >= 2
@@ -1066,11 +1076,7 @@ public:
 			{
 				CDevice& device = **it;
 
-				if (m_pClient && device.HasClient(*m_pClient)) {
-					continue;
-				}
-
-				if (device.HasNetwork(*m_pNetwork)) {
+				if (device.HasNetwork(*m_pNetwork) && !IsDeviceConnected(device)) {
 					bool bMention = (
 						((pChannel == NULL) || device.HasMentionChannel(pChannel->GetName())) ||
 						device.HasMentionNick(Nick.GetNick()) ||
