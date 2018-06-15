@@ -1,9 +1,6 @@
-PALAVER_VERSION := $(shell git describe --tags --always --dirty 2> /dev/null || cat VERSION)
-CXXFLAGS := -Wno-unknown-pragmas -DPALAVER_VERSION=\"$(PALAVER_VERSION)\"
-
 palaver.so: test palaver.cpp
 	@echo "Building palaver.so"
-	@CXXFLAGS="$(CXXFLAGS)" znc-buildmod palaver.cpp
+	@znc-buildmod palaver.cpp
 
 install: palaver.so
 	@echo "Installing palaver.so to $(HOME)/.znc/modules/palaver.so"
