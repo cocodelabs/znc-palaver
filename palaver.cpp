@@ -7,10 +7,7 @@
 
 #define REQUIRESSL
 
-#ifndef PALAVER_VERSION
-	#error "Please follow the installation instructions in the README."
-#endif
-
+#define PALAVER_VERSION "1.1.1"
 
 #include <znc/Modules.h>
 #include <znc/User.h>
