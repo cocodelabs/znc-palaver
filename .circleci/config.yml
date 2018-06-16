@@ -7,7 +7,7 @@ workflows:
       - build-znc1.7
 
 jobs:
-  build:
+  build: &build
     docker:
       - image: znc
 
