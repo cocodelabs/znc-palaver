@@ -319,6 +319,19 @@ public:
 		return bHasNetwork;
 	}
 
+	bool IsNetworkConnected(const CIRCNetwork& network) const {
+		bool bIsConnected = false;
+
+		for (CClient* pClient : network.GetClients()) {
+			if (pClient && this->HasClient(*pClient)){
+				bIsConnected = true;
+				break;
+			}
+		}
+
+		return bIsConnected;
+	}
+
 	bool AddNetworkNamed(const CString& sUsername, const CString& sNetwork, const CString& sNetworkID) {
 		bool bDidAddNetwork = false;
 
@@ -1063,7 +1076,7 @@ public:
 			{
 				CDevice& device = **it;
 
-				if (m_pClient && device.HasClient(*m_pClient)) {
+				if (device.IsNetworkConnected(*m_pNetwork)) {
 					continue;
 				}
 
