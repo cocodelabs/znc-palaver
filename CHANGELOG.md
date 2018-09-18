@@ -1,6 +1,6 @@
 # Changelog for Palaver ZNC Module
 
-## Master
+## 1.1.2
 
 ### Bug Fixes
 
