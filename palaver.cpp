@@ -319,19 +319,6 @@ public:
 		return bHasNetwork;
 	}
 
-	bool IsNetworkConnected(const CIRCNetwork& m_pNetwork) const {
-		bool bIsConnected = false;
-
-		for (CClient* pClient : m_pNetwork.GetClients()) {
-			if (this->HasClient(*pClient)){
-				bIsConnected = true;
-				break;
-			}
-		}
-
-		return bIsConnected;
-	}
-
 	bool AddNetworkNamed(const CString& sUsername, const CString& sNetwork, const CString& sNetworkID) {
 		bool bDidAddNetwork = false;
 
@@ -1080,7 +1067,7 @@ public:
 					continue;
 				}
 
-				if (device.IsNetworkConnected(*m_pNetwork)) {
+				if (device.HasNetwork(*m_pNetwork)) {
 					bool bMention = (
 						((pChannel == NULL) || device.HasMentionChannel(pChannel->GetName())) ||
 						device.HasMentionNick(Nick.GetNick()) ||
