@@ -36,6 +36,7 @@
 
 const char *kPLVCapability = "palaverapp.com";
 const char *kPLVCommand = "PALAVER";
+const char *kPLVPushTokenKey = "PUSH-TOKEN";
 const char *kPLVPushEndpointKey = "PUSH-ENDPOINT";
 const char *kPLVMentionKeywordKey = "MENTION-KEYWORD";
 const char *kPLVMentionChannelKey = "MENTION-CHANNEL";
@@ -241,6 +242,14 @@ public:
 		return m_sToken;
 	}
 
+	void SetPushToken(const CString &sToken) {
+		m_sPushToken = sToken;
+	}
+
+	CString GetPushToken() const {
+		return m_sPushToken;
+	}
+
 	void SetPushEndpoint(const CString &sEndpoint) {
 		m_sPushEndpoint = sEndpoint;
 	}
@@ -416,6 +425,7 @@ public:
 	void ResetDevice() {
 		m_bInNegotiation = false;
 		m_sVersion = "";
+		m_sPushToken = "";
 		m_sPushEndpoint = "";
 		m_bShowMessagePreview = true;
 
@@ -596,6 +606,8 @@ public:
 				SetVersion(sValue);
 			} else if (sKey.Equals(kPLVPushEndpointKey)) {
 				SetPushEndpoint(sValue);
+			} else if (sKey.Equals(kPLVPushTokenKey)) {
+				SetPushToken(sValue);
 			} else if (sKey.Equals(kPLVShowMessagePreviewKey)) {
 				SetShowMessagePreview(sValue.Equals("true"));
 			}
@@ -643,6 +655,10 @@ public:
 
 		if (GetPushEndpoint().empty() == false) {
 			File.Write("SET " + CString(kPLVPushEndpointKey) + " " + GetPushEndpoint() + "\n");
+		}
+
+		if (GetPushToken().empty() == false) {
+			File.Write("SET " + CString(kPLVPushTokenKey) + " " + GetPushToken() + "\n");
 		}
 
 		for (VCString::const_iterator it = m_vMentionKeywords.begin();
@@ -710,7 +726,12 @@ public:
 
 		MCString mcsHeaders;
 
-		mcsHeaders["Authorization"] = CString("Bearer " + GetToken());
+		CString token = GetPushToken();
+		if (!token.empty()) {
+			token = GetToken();
+		}
+
+		mcsHeaders["Authorization"] = CString("Bearer " + token);
 		mcsHeaders["Content-Type"] = "application/json";
 
 		CString sJSON = "{";
@@ -743,7 +764,11 @@ public:
 		if (m_uiBadge != 0) {
 			MCString mcsHeaders;
 
-			mcsHeaders["Authorization"] = CString("Bearer " + GetToken());
+			CString token = GetPushToken();
+			if (!token.empty()) {
+				token = GetToken();
+			}
+			mcsHeaders["Authorization"] = CString("Bearer " + token);
 			mcsHeaders["Content-Type"] = "application/json";
 
 			CString sJSON = "{\"badge\": 0}";
@@ -763,6 +788,7 @@ private:
 	CString m_sToken;
 	CString m_sVersion;
 	CString m_sPushEndpoint;
+	CString m_sPushToken;
 
 	std::map<CString, MCString> m_msmsNetworks;
 
