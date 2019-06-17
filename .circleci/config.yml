@@ -5,6 +5,7 @@ workflows:
     jobs:
       - build-znc1.6
       - build-znc1.7
+      - test
 
 jobs:
   build: &build
@@ -25,3 +26,17 @@ jobs:
     <<: *build
     docker:
       - image: znc:1.7
+
+  test:
+    <<: *build
+
+    steps:
+      - checkout
+      - run: |
+          export PATH="/opt/znc/bin:$PATH"
+          pip3 install pytest-asyncio
+          znc-buildmod palaver.cpp
+          make test-integration
+
+      - store_test_results:
+          path: test-reports
