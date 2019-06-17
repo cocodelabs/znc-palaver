@@ -29,4 +29,5 @@ test/fixtures/modules/palaver.so: palaver.so
 
 .PHONY: test-integration
 test-integration: test/fixtures/modules/palaver.so
-	pytest
+	@mkdir test-reports
+	pytest --junitxml=test-reports/junit.xml

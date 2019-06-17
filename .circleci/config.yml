@@ -37,3 +37,6 @@ jobs:
           pip3 install pytest-asyncio
           znc-buildmod palaver.cpp
           make test-integration
+
+      - store_test_results:
+          path: test-reports
