@@ -1,5 +1,13 @@
 # Changelog for Palaver ZNC Module
 
+## TBD
+
+### Enhancements
+
+- Adds support for cap-notify, this allows Palaver to know when the ZNC module
+  was loaded/unloaded so it can setup push notifications without having to
+  reconnect Palaver after loading the module.
+
 ## 1.1.2
 
 ### Bug Fixes

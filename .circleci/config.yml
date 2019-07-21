@@ -34,7 +34,7 @@ jobs:
       - checkout
       - run: |
           export PATH="/opt/znc/bin:$PATH"
-          pip3 install pytest-asyncio
+          pip3 install pytest-asyncio semantic_version
           znc-buildmod palaver.cpp
           make test-integration
 
