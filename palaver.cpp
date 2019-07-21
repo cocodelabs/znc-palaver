@@ -28,6 +28,12 @@
 #endif
 
 
+#if defined VERSION_MAJOR && defined VERSION_MINOR && VERSION_MAJOR >= 1 && VERSION_MINOR >= 7
+#define HAS_CAP_NOTIFY
+#endif
+
+
+
 const char *kPLVCapability = "palaverapp.com";
 const char *kPLVCommand = "PALAVER";
 const char *kPLVPushEndpointKey = "PUSH-ENDPOINT";
@@ -791,8 +797,36 @@ public:
 	virtual bool OnLoad(const CString& sArgs, CString& sMessage) {
 		Load();
 
+#ifdef HAS_CAP_NOTIFY
+		const std::map<CString, CUser*>& msUsers = CZNC::Get().GetUserMap();
+
+		for (std::map<CString, CUser*>::const_iterator it = msUsers.begin(); it != msUsers.end(); ++it) {
+			CUser* pUser = it->second;
+			for (CClient* pClient : pUser->GetAllClients()) {
+				if (pClient->HasCapNotify()) {
+					pClient->PutClient(":irc.znc.in CAP " + pClient->GetNick() + " NEW :" + kPLVCapability);
+				}
+			}
+		}
+#endif
+
 		return true;
 	}
+
+#ifdef HAS_CAP_NOTIFY
+	~CPalaverMod() {
+		const std::map<CString, CUser*>& msUsers = CZNC::Get().GetUserMap();
+
+		for (std::map<CString, CUser*>::const_iterator it = msUsers.begin(); it != msUsers.end(); ++it) {
+			CUser* pUser = it->second;
+			for (CClient* pClient : pUser->GetAllClients()) {
+				if (pClient->HasCapNotify()) {
+					pClient->PutClient(":irc.znc.in CAP " + pClient->GetNick() + " DEL :" + kPLVCapability);
+				}
+			}
+		}
+	}
+#endif
 
 #pragma mark - Cap
 
