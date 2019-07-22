@@ -1,9 +1,6 @@
----
-Latest Version: 1.1.2
----
-
 # Palaver ZNC Module
 
+![Latest version](https://img.shields.io/github/tag/cocodelabs/znc-palaver.svg)
 [![Build Status](https://img.shields.io/circleci/project/cocodelabs/znc-palaver/master.svg)](https://circleci.com/gh/cocodelabs/znc-palaver)
 
 Palaver ZNC module provides push notifications to Palaver while Palaver is
