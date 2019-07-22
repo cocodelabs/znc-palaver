@@ -25,19 +25,19 @@ notifications on your phone at the same time.
 
 ### Download the module
 
-#### Via Git (recommended)
+#### Via wget (recommended)
+
+```bash
+$ wget https://github.com/cocodelabs/znc-palaver/archive/master.tar.gz
+$ tar -xzf master.tar.gz
+$ cd znc-palaver-master
+```
+
+#### Via Git
 
 ```bash
 $ git clone https://github.com/Palaver/znc-palaver
 $ cd znc-palaver
-```
-
-#### Via wget
-
-```bash
-$ wget https://github.com/Palaver/znc-palaver/archive/master.zip
-$ unzip master.zip
-$ cd znc-palaver-master
 ```
 
 ### Compiling
