@@ -1,6 +1,6 @@
 # Changelog for Palaver ZNC Module
 
-## TBD
+## 1.2.0
 
 ### Enhancements
 

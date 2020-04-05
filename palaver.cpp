@@ -7,7 +7,7 @@
 
 #define REQUIRESSL
 
-#define ZNC_PALAVER_VERSION "1.1.2"
+#define ZNC_PALAVER_VERSION "1.2.0"
 
 #include <znc/Modules.h>
 #include <znc/User.h>
