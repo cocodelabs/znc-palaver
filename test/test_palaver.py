@@ -10,17 +10,40 @@ from semantic_version import Version
 pytestmark = pytest.mark.asyncio
 
 
-async def requires_znc_version(znc_version):
+async def get_znc_version():
     proc = await asyncio.create_subprocess_shell(
         'znc --version',
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE)
 
     stdout, stderr = await proc.communicate()
-    version = stdout.decode('utf-8').split()[1]
+    return stdout.decode('utf-8').split()[1]
 
-    if Version(znc_version) > Version(version):
+
+async def requires_znc_version(znc_version):
+    actual_version = await get_znc_version()
+
+    if Version(znc_version) > Version(actual_version):
         pytest.skip('ZNC >= {} is required for this test, found {}'.format(znc_version, version))
+
+
+async def assert_user_agent(header):
+    header = header.decode('utf-8')
+    assert header.endswith('\r\n')
+
+    (name, value) = header.strip().split(': ')
+    assert name == 'User-Agent'
+
+    products = value.split(' ')
+    assert len(products) == 2
+
+    product1, product1_version = products[0].split('/')
+    assert product1 == 'znc-palaver'
+    assert Version(product1_version).major >= 1
+
+    product2, product2_version = products[1].split('/')
+    assert product2 == 'znc'
+    assert product2_version == await get_znc_version()
 
 
 async def setUp(event_loop):
@@ -147,8 +170,7 @@ async def test_receiving_notification(event_loop):
         line = await reader.readline()
         assert line == b'Content-Type: application/json\r\n'
 
-        line = await reader.readline()
-        assert line == b'User-Agent: ZNC\r\n'
+        await assert_user_agent(await reader.readline())
 
         line = await reader.readline()
         assert line == b'\r\n'
@@ -212,8 +234,7 @@ async def test_receiving_notification_with_push_token(event_loop):
         line = await reader.readline()
         assert line == b'Content-Type: application/json\r\n'
 
-        line = await reader.readline()
-        assert line == b'User-Agent: ZNC\r\n'
+        await assert_user_agent(await reader.readline())
 
         line = await reader.readline()
         assert line == b'\r\n'

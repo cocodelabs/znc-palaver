@@ -103,7 +103,8 @@ public:
 		}
 
 		mcsHeaders["Connection"] = "close";
-		mcsHeaders["User-Agent"] = "ZNC";
+		// as per https://tools.ietf.org/html/rfc7231#section-5.5.3
+		mcsHeaders["User-Agent"] = "znc-palaver/" + CString(PALAVER_VERSION) + " znc/" + CZNC::GetVersion();
 
 		if (sMethod.Equals("GET") == false || sContent.length() > 0) {
 			mcsHeaders["Content-Length"] = CString(sContent.length());
