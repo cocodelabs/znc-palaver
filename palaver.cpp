@@ -7,7 +7,7 @@
 
 #define REQUIRESSL
 
-#define PALAVER_VERSION "1.1.2"
+#define ZNC_PALAVER_VERSION "1.1.2"
 
 #include <znc/Modules.h>
 #include <znc/User.h>
@@ -104,7 +104,7 @@ public:
 
 		mcsHeaders["Connection"] = "close";
 		// as per https://tools.ietf.org/html/rfc7231#section-5.5.3
-		mcsHeaders["User-Agent"] = "znc-palaver/" + CString(PALAVER_VERSION) + " znc/" + CZNC::GetVersion();
+		mcsHeaders["User-Agent"] = "znc-palaver/" + CString(ZNC_PALAVER_VERSION) + " znc/" + CZNC::GetVersion();
 
 		if (sMethod.Equals("GET") == false || sContent.length() > 0) {
 			mcsHeaders["Content-Length"] = CString(sContent.length());
@@ -1280,7 +1280,7 @@ public:
 		PutModule("Be sure to include all information from this command so we can try and debug any issues.");
 		PutModule("--");
 
-		PutModule("Palaver ZNC: " + CString(PALAVER_VERSION) + " -- http://palaverapp.com/");
+		PutModule("Palaver ZNC: " + CString(ZNC_PALAVER_VERSION) + " -- http://palaverapp.com/");
 		CDevice *pDevice = DeviceForClient(*m_pClient);
 		if (pDevice) {
 			PutModule("Current device: (" + pDevice->GetIdentifier() + ")");
