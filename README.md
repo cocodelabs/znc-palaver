@@ -63,7 +63,7 @@ Now load the ZNC module:
 
 When upgrading the module to a newer version be sure to run
 `/msg *status unloadmod palaver` before you copy the updated module into
-place. Without doing this, you may experiance an issue where you will be
+place. Without doing this, you may experience an issue where you will be
 unable to load the update version correctly without restarting ZNC.
 
 ## Debugging
@@ -72,7 +72,7 @@ If you are having any problems with the module you can follow the
 following steps to debug your setup.
 
 1. Ensure you are running the latest version of the ZNC Palaver module and ZNC 1.6 or newer.
-1. Check if your device has succsessfully registered with ZNC. You can run `/msg *palaver info` and it will let you know if your device is registered.
+1. Check if your device has successfully registered with ZNC. You can run `/msg *palaver info` and it will let you know if your device is registered.
 1. Run `/msg *palaver test` to send a test notification to your registered devices.
    
 #### My device is registered, but I don't receive any push notifications
