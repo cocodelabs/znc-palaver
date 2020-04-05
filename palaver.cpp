@@ -727,7 +727,7 @@ public:
 		MCString mcsHeaders;
 
 		CString token = GetPushToken();
-		if (!token.empty()) {
+		if (token.empty()) {
 			token = GetIdentifier();
 		}
 
@@ -756,7 +756,7 @@ public:
 		}
 		sJSON += "}";
 
-		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, GetIdentifier(), "POST", GetPushEndpoint(), mcsHeaders, sJSON);
+		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
 		module.AddSocket(pSocket);
 	}
 
@@ -765,7 +765,7 @@ public:
 			MCString mcsHeaders;
 
 			CString token = GetPushToken();
-			if (!token.empty()) {
+			if (token.empty()) {
 				token = GetIdentifier();
 			}
 			mcsHeaders["Authorization"] = CString("Bearer " + token);
@@ -773,7 +773,7 @@ public:
 
 			CString sJSON = "{\"badge\": 0}";
 
-			PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, GetIdentifier(), "POST", GetPushEndpoint(), mcsHeaders, sJSON);
+			PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
 			module.AddSocket(pSocket);
 
 			m_uiBadge = 0;
