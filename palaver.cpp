@@ -36,6 +36,7 @@
 
 const char *kPLVCapability = "palaverapp.com";
 const char *kPLVCommand = "PALAVER";
+const char *kPLVPushTokenKey = "PUSH-TOKEN";
 const char *kPLVPushEndpointKey = "PUSH-ENDPOINT";
 const char *kPLVMentionKeywordKey = "MENTION-KEYWORD";
 const char *kPLVMentionChannelKey = "MENTION-CHANNEL";
@@ -203,20 +204,20 @@ private:
 
 class PLVHTTPNotificationSocket : public PLVHTTPSocket {
 public:
-	PLVHTTPNotificationSocket(CModule *pModule, const CString &sToken, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : PLVHTTPSocket(pModule, sMethod, sURL, mcsHeaders, sContent) {
-		m_sToken = sToken;
+	PLVHTTPNotificationSocket(CModule *pModule, const CString &sIdentifier, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : PLVHTTPSocket(pModule, sMethod, sURL, mcsHeaders, sContent) {
+		m_sIdentifier = sIdentifier;
 	}
 
 	virtual void HandleStatusCode(unsigned int status);
 
 private:
-	CString m_sToken;
+	CString m_sIdentifier;
 };
 
 class CDevice {
 public:
-	CDevice(const CString &sToken) {
-		m_sToken = sToken;
+	CDevice(const CString &sIdentifier) {
+		m_sIdentifier = sIdentifier;
 		m_bInNegotiation = false;
 		m_uiBadge = 0;
 	}
@@ -237,8 +238,16 @@ public:
 		m_sVersion = sVersion;
 	}
 
-	CString GetToken() const {
-		return m_sToken;
+	CString GetIdentifier() const {
+		return m_sIdentifier;
+	}
+
+	void SetPushToken(const CString &sToken) {
+		m_sPushToken = sToken;
+	}
+
+	CString GetPushToken() const {
+		return m_sPushToken;
 	}
 
 	void SetPushEndpoint(const CString &sEndpoint) {
@@ -416,6 +425,7 @@ public:
 	void ResetDevice() {
 		m_bInNegotiation = false;
 		m_sVersion = "";
+		m_sPushToken = "";
 		m_sPushEndpoint = "";
 		m_bShowMessagePreview = true;
 
@@ -596,6 +606,8 @@ public:
 				SetVersion(sValue);
 			} else if (sKey.Equals(kPLVPushEndpointKey)) {
 				SetPushEndpoint(sValue);
+			} else if (sKey.Equals(kPLVPushTokenKey)) {
+				SetPushToken(sValue);
 			} else if (sKey.Equals(kPLVShowMessagePreviewKey)) {
 				SetShowMessagePreview(sValue.Equals("true"));
 			}
@@ -629,7 +641,7 @@ public:
 	}
 
 	void Write(CFile& File) const {
-		File.Write("BEGIN " + GetToken() + "\n");
+		File.Write("BEGIN " + GetIdentifier() + "\n");
 
 		if (GetVersion().empty() == false) {
 			File.Write("SET VERSION " + GetVersion() + "\n");
@@ -643,6 +655,10 @@ public:
 
 		if (GetPushEndpoint().empty() == false) {
 			File.Write("SET " + CString(kPLVPushEndpointKey) + " " + GetPushEndpoint() + "\n");
+		}
+
+		if (GetPushToken().empty() == false) {
+			File.Write("SET " + CString(kPLVPushTokenKey) + " " + GetPushToken() + "\n");
 		}
 
 		for (VCString::const_iterator it = m_vMentionKeywords.begin();
@@ -710,7 +726,12 @@ public:
 
 		MCString mcsHeaders;
 
-		mcsHeaders["Authorization"] = CString("Bearer " + GetToken());
+		CString token = GetPushToken();
+		if (token.empty()) {
+			token = GetIdentifier();
+		}
+
+		mcsHeaders["Authorization"] = CString("Bearer " + token);
 		mcsHeaders["Content-Type"] = "application/json";
 
 		CString sJSON = "{";
@@ -735,7 +756,7 @@ public:
 		}
 		sJSON += "}";
 
-		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, GetToken(), "POST", GetPushEndpoint(), mcsHeaders, sJSON);
+		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
 		module.AddSocket(pSocket);
 	}
 
@@ -743,12 +764,16 @@ public:
 		if (m_uiBadge != 0) {
 			MCString mcsHeaders;
 
-			mcsHeaders["Authorization"] = CString("Bearer " + GetToken());
+			CString token = GetPushToken();
+			if (token.empty()) {
+				token = GetIdentifier();
+			}
+			mcsHeaders["Authorization"] = CString("Bearer " + token);
 			mcsHeaders["Content-Type"] = "application/json";
 
 			CString sJSON = "{\"badge\": 0}";
 
-			PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, GetToken(), "POST", GetPushEndpoint(), mcsHeaders, sJSON);
+			PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
 			module.AddSocket(pSocket);
 
 			m_uiBadge = 0;
@@ -760,9 +785,10 @@ public:
 	}
 
 private:
-	CString m_sToken;
+	CString m_sIdentifier;
 	CString m_sVersion;
 	CString m_sPushEndpoint;
+	CString m_sPushToken;
 
 	std::map<CString, MCString> m_msmsNetworks;
 
@@ -862,11 +888,11 @@ public:
 					pDevice->RemoveClient(*pClient);
 				}
 
-				CString sToken = sLine.Token(2);
+				CString sClientIdentifier = sLine.Token(2);
 				CString sVersion = sLine.Token(3);
 				CString sNetworkID = sLine.Token(4);
 
-				CDevice& device = DeviceWithToken(sToken);
+				CDevice& device = DeviceWithIdentifier(sClientIdentifier);
 
 				if (device.InNegotiation() == false && device.GetVersion().Equals(sVersion) == false) {
 					pClient->PutClient("PALAVER REQ *");
@@ -888,10 +914,10 @@ public:
 					return HALT;
 				}
 
-				CString sToken = sLine.Token(2);
+				CString sClientIdentifier = sLine.Token(2);
 				CString sVersion = sLine.Token(3);
 
-				if (!pDevice->GetToken().Equals(sToken)) {
+				if (!pDevice->GetIdentifier().Equals(sClientIdentifier)) {
 					// Setting was for a different device than the one the user registered with
 					return HALT;
 				}
@@ -955,21 +981,21 @@ public:
 
 #pragma mark -
 
-	CDevice& DeviceWithToken(const CString& sToken) {
+	CDevice& DeviceWithIdentifier(const CString& sIdentifier) {
 		CDevice *pDevice = NULL;
 
 		for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
 				it != m_vDevices.end(); ++it) {
 			CDevice& device = **it;
 
-			if (device.GetToken().Equals(sToken)) {
+			if (device.GetIdentifier().Equals(sIdentifier)) {
 				pDevice = &device;
 				break;
 			}
 		}
 
 		if (pDevice == NULL) {
-			pDevice = new CDevice(sToken);
+			pDevice = new CDevice(sIdentifier);
 			m_vDevices.push_back(pDevice);
 		}
 
@@ -992,12 +1018,12 @@ public:
 		return pDevice;
 	}
 
-	bool RemoveDeviceWithToken(const CString& sToken) {
+	bool RemoveDeviceWithIdentifier(const CString& sIdentifier) {
 		for (std::vector<CDevice*>::iterator it = m_vDevices.begin();
 				it != m_vDevices.end(); ++it) {
 			CDevice& device = **it;
 
-			if (device.GetToken().Equals(sToken)) {
+			if (device.GetIdentifier().Equals(sIdentifier)) {
 				m_vDevices.erase(it);
 				Save();
 				return true;
@@ -1212,7 +1238,7 @@ public:
 					const CString sNetwork = it3->first;
 
 					Table.AddRow();
-					Table.SetCell("Device", device.GetToken());
+					Table.SetCell("Device", device.GetIdentifier());
 					Table.SetCell("User", sUsername);
 					Table.SetCell("Network", sNetwork);
 					Table.SetCell("Negotiating", CString(device.InNegotiation()));
@@ -1220,7 +1246,7 @@ public:
 
 				if (networks.size() == 0) {
 					Table.AddRow();
-					Table.SetCell("Device", device.GetToken());
+					Table.SetCell("Device", device.GetIdentifier());
 					Table.SetCell("User", sUsername);
 					Table.SetCell("Network", "");
 					Table.SetCell("Negotiating", CString(device.InNegotiation()));
@@ -1229,7 +1255,7 @@ public:
 
 			if (msmsNetworks.size() == 0) {
 				Table.AddRow();
-				Table.SetCell("Device", device.GetToken());
+				Table.SetCell("Device", device.GetIdentifier());
 				Table.SetCell("User", "");
 				Table.SetCell("Network", "");
 				Table.SetCell("Negotiating", CString(device.InNegotiation()));
@@ -1242,7 +1268,7 @@ public:
 
 		CDevice *pDevice = DeviceForClient(*m_pClient);
 		if (pDevice) {
-			PutModule("You are connected from Palaver. (" + pDevice->GetToken() + ")");
+			PutModule("You are connected from Palaver. (" + pDevice->GetIdentifier() + ")");
 		} else {
 			PutModule("You are not connected from a Palaver client.");
 		}
@@ -1256,7 +1282,7 @@ public:
 		PutModule("Palaver ZNC: " + CString(PALAVER_VERSION) + " -- http://palaverapp.com/");
 		CDevice *pDevice = DeviceForClient(*m_pClient);
 		if (pDevice) {
-			PutModule("Current device: (" + pDevice->GetToken() + ")");
+			PutModule("Current device: (" + pDevice->GetIdentifier() + ")");
 		}
 		PutModule(CString(m_vDevices.size()) + " registered devices");
 
@@ -1272,7 +1298,7 @@ void PLVHTTPNotificationSocket::HandleStatusCode(unsigned int status) {
 	if (status == 401) {
 		if (CPalaverMod *pModule = dynamic_cast<CPalaverMod *>(m_pModule)) {
 			DEBUG("palaver: Removing device");
-			pModule->RemoveDeviceWithToken(m_sToken);
+			pModule->RemoveDeviceWithIdentifier(m_sIdentifier);
 		}
 	}
 }
