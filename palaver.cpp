@@ -7,7 +7,7 @@
 
 #define REQUIRESSL
 
-#define ZNC_PALAVER_VERSION "1.2.0"
+#define ZNC_PALAVER_VERSION "1.2.1"
 
 #include <znc/Modules.h>
 #include <znc/User.h>
@@ -761,21 +761,23 @@ public:
 		module.AddSocket(pSocket);
 	}
 
-	void ClearBadges(CModule& module) {
+	void ClearBadges(CModule& module, bool bInformAPI) {
 		if (m_uiBadge != 0) {
-			MCString mcsHeaders;
+			if (bInformAPI) {
+				MCString mcsHeaders;
 
-			CString token = GetPushToken();
-			if (token.empty()) {
-				token = GetIdentifier();
+				CString token = GetPushToken();
+				if (token.empty()) {
+					token = GetIdentifier();
+				}
+				mcsHeaders["Authorization"] = CString("Bearer " + token);
+				mcsHeaders["Content-Type"] = "application/json";
+
+				CString sJSON = "{\"badge\": 0}";
+
+				PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
+				module.AddSocket(pSocket);
 			}
-			mcsHeaders["Authorization"] = CString("Bearer " + token);
-			mcsHeaders["Content-Type"] = "application/json";
-
-			CString sJSON = "{\"badge\": 0}";
-
-			PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushEndpoint(), mcsHeaders, sJSON);
-			module.AddSocket(pSocket);
 
 			m_uiBadge = 0;
 		}
@@ -965,8 +967,8 @@ public:
 					it != m_vDevices.end(); ++it) {
 				CDevice& device = **it;
 
-				if (device.HasClient(*m_pClient) == false && device.HasNetwork(*pNetwork)) {
-					device.ClearBadges(*this);
+				if (device.HasNetwork(*pNetwork)) {
+					device.ClearBadges(*this, !device.HasClient(*m_pClient));
 				}
 			}
 		}

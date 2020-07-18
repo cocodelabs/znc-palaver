@@ -1,5 +1,12 @@
 # Changelog for Palaver ZNC Module
 
+## 1.2.1 (18/07/2020)
+
+### Bug Fixes
+
+- Fixes a case where the unread badge on send push notifications would not get
+  reset when reconnecting the same Palaver device.
+
 ## 1.2.0
 
 ### Enhancements
