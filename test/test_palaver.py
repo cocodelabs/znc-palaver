@@ -50,10 +50,10 @@ async def setUp(event_loop):
     running_as_root = os.getuid() == 0
     allow_root = ' --allow-root' if running_as_root else ''
 
-    proc = await asyncio.create_subprocess_shell(f'znc -d test/fixtures --foreground --debug{allow_root}', loop=event_loop)
+    proc = await asyncio.create_subprocess_shell(f'znc -d test/fixtures --foreground --debug{allow_root}')
     time.sleep(31 if running_as_root else 1)
 
-    (reader, writer) = await asyncio.open_connection('localhost', 6698, loop=event_loop)
+    (reader, writer) = await asyncio.open_connection('localhost', 6698)
     writer.write(b'CAP LS 302\r\n')
 
     line = await reader.readline()
@@ -184,7 +184,7 @@ async def test_receiving_notification(event_loop):
 
         connected.called = True
 
-    server = await asyncio.start_server(connected, host='127.0.0.1', port=0, loop=event_loop)
+    server = await asyncio.start_server(connected, host='127.0.0.1', port=0)
     await asyncio.sleep(0.2)
     addr = server.sockets[0].getsockname()
     url = f'Serving on http://{addr[0]}:{addr[1]}/push'
@@ -248,7 +248,7 @@ async def test_receiving_notification_with_push_token(event_loop):
 
         connected.called = True
 
-    server = await asyncio.start_server(connected, host='127.0.0.1', port=0, loop=event_loop)
+    server = await asyncio.start_server(connected, host='127.0.0.1', port=0)
     await asyncio.sleep(0.2)
     addr = server.sockets[0].getsockname()
     url = f'Serving on http://{addr[0]}:{addr[1]}/push'
