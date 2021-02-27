@@ -96,6 +96,22 @@ struct PLVURL {
 	}
 };
 
+struct PLVHTTPMessage {
+	MCString headers;
+	CString body;
+
+	PLVHTTPMessage(MCString h, CString b) : headers(h), body(b) {
+	}
+};
+
+struct PLVHTTPRequest : PLVHTTPMessage {
+	PLVURL url;
+	CString method;
+
+	PLVHTTPRequest(PLVURL u, CString m, MCString h, CString b) : PLVHTTPMessage(h, b), url(u), method(m) {
+	};
+};
+
 typedef enum {
 	StatusLine = 0,
 	Headers = 1,
@@ -107,28 +123,25 @@ class PLVHTTPSocket : public CSocket {
 	EPLVHTTPSocketState m_eState;
 
 public:
-	PLVHTTPSocket(CModule *pModule, const CString &sMethod, PLVURL url, MCString &mcsHeaders, const CString &sContent) : CSocket(pModule) {
+	PLVHTTPSocket(CModule *pModule, PLVURL url) : CSocket(pModule) {
 		m_eState = StatusLine;
 		m_sHostname = url.host;
 
-		mcsHeaders["Connection"] = "close";
-		// as per https://tools.ietf.org/html/rfc7231#section-5.5.3
-		mcsHeaders["User-Agent"] = "znc-palaver/" + CString(ZNC_PALAVER_VERSION) + " znc/" + CZNC::GetVersion();
-
-		if (sMethod.Equals("GET") == false || sContent.length() > 0) {
-			mcsHeaders["Content-Length"] = CString(sContent.length());
-		}
-
 		bool useSSL = url.scheme.Equals("https");
 
-		DEBUG("Palaver: Connecting to '" << url.host << "' on port " << url.port << (useSSL ? " with" : " without") << " TLS (" << sMethod << " " << url.path << ")");
+		DEBUG("Palaver: Connecting to '" << url.host << "' on port " << url.port << (useSSL ? " with" : " without") << " TLS");
 
 		Connect(url.host, url.port, useSSL);
 		EnableReadLine();
-		Write(sMethod + " " + url.path + " HTTP/1.1\r\n");
-		Write("Host: " + url.host + "\r\n");
+	}
 
-		for (MCString::const_iterator it = mcsHeaders.begin(); it != mcsHeaders.end(); ++it) {
+	void Send(PLVHTTPRequest &request) {
+		Write(request.method + " " + request.url.path + " HTTP/1.1\r\n");
+		Write("Host: " + request.url.host + "\r\n");
+		Write("Connection: close\r\n");
+		Write("Content-Length: " + CString(request.body.length()) + "\r\n");
+
+		for (MCString::const_iterator it = request.headers.begin(); it != request.headers.end(); ++it) {
 			const CString &sKey = it->first;
 			const CString &sValue = it->second;
 
@@ -137,8 +150,8 @@ public:
 
 		Write("\r\n");
 
-		if (sContent.length() > 0) {
-			Write(sContent);
+		if (request.body.length() > 0) {
+			Write(request.body);
 		}
 	}
 
@@ -214,7 +227,7 @@ private:
 
 class PLVHTTPNotificationSocket : public PLVHTTPSocket {
 public:
-	PLVHTTPNotificationSocket(CModule *pModule, const CString &sIdentifier, const CString &sMethod, PLVURL url, MCString &mcsHeaders, const CString &sContent) : PLVHTTPSocket(pModule, sMethod, url, mcsHeaders, sContent) {
+	PLVHTTPNotificationSocket(CModule *pModule, const CString &sIdentifier, PLVURL url) : PLVHTTPSocket(pModule, url) {
 		m_sIdentifier = sIdentifier;
 	}
 
@@ -738,8 +751,6 @@ public:
 	void SendNotification(CModule& module, const CString& sSender, const CString& sNotification, const CChan *pChannel, CString sIntent = "") {
 		++m_uiBadge;
 
-		MCString mcsHeaders;
-
 		CString sJSON = "{";
 		sJSON += "\"badge\": " + CString(m_uiBadge);
 
@@ -762,6 +773,8 @@ public:
 		}
 		sJSON += "}";
 
+		MCString mcsHeaders;
+
 		SendNotificationRequest(module, sJSON);
 	}
 
@@ -775,7 +788,11 @@ public:
 
 		mcsHeaders["Authorization"] = CString("Bearer " + token);
 		mcsHeaders["Content-Type"] = "application/json";
-		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushURL(), mcsHeaders, sJSONBody);
+		mcsHeaders["User-Agent"] = "znc-palaver/" + CString(ZNC_PALAVER_VERSION) + " znc/" + CZNC::GetVersion();
+
+		PLVHTTPRequest request = PLVHTTPRequest(GetPushURL(), "POST", mcsHeaders, sJSONBody);
+		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, GetPushURL());
+		pSocket->Send(request);
 		module.AddSocket(pSocket);
 	}
 
