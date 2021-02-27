@@ -67,6 +67,34 @@ CString re_escape(const CString& sString) {
 }
 #endif
 
+struct PLVURL {
+	CString scheme;
+	CString host;
+	int port;
+	CString path;
+
+	PLVURL(CString sURL) {
+		scheme = sURL.Token(0, false, "://");
+		CString sTemp = sURL.Token(1, true, "://");
+		CString sAddress = sTemp.Token(0, false, "/");
+
+		host = sAddress.Token(0, false, ":");
+		CString sPort = sAddress.Token(1, true, ":");
+		path = "/" + sTemp.Token(1, true, "/");
+
+		if (sPort.empty()) {
+			if (scheme.Equals("https")) {
+				port = 443;
+			} else if (scheme.Equals("http")) {
+				port = 80;
+			} else {
+				port = 80;
+			}
+		} else {
+			port = sPort.ToUShort();
+		}
+	}
+};
 
 typedef enum {
 	StatusLine = 0,
@@ -79,28 +107,9 @@ class PLVHTTPSocket : public CSocket {
 	EPLVHTTPSocketState m_eState;
 
 public:
-	PLVHTTPSocket(CModule *pModule, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : CSocket(pModule) {
+	PLVHTTPSocket(CModule *pModule, const CString &sMethod, PLVURL url, MCString &mcsHeaders, const CString &sContent) : CSocket(pModule) {
 		m_eState = StatusLine;
-
-		unsigned short uPort = 80;
-
-		CString sScheme = sURL.Token(0, false, "://");
-		CString sTemp = sURL.Token(1, true, "://");
-		CString sAddress = sTemp.Token(0, false, "/");
-
-		m_sHostname = sAddress.Token(0, false, ":");
-		CString sPort = sAddress.Token(1, true, ":");
-		CString sPath = "/" + sTemp.Token(1, true, "/");
-
-		if (sPort.empty()) {
-			if (sScheme.Equals("https")) {
-				uPort = 443;
-			} else if (sScheme.Equals("http")) {
-				uPort = 80;
-			}
-		} else {
-			uPort = sPort.ToUShort();
-		}
+		m_sHostname = url.host;
 
 		mcsHeaders["Connection"] = "close";
 		// as per https://tools.ietf.org/html/rfc7231#section-5.5.3
@@ -110,14 +119,14 @@ public:
 			mcsHeaders["Content-Length"] = CString(sContent.length());
 		}
 
-		bool useSSL = sScheme.Equals("https");
+		bool useSSL = url.scheme.Equals("https");
 
-		DEBUG("Palaver: Connecting to '" << m_sHostname << "' on port " << uPort << (useSSL ? " with" : " without") << " TLS (" << sMethod << " " << sPath << ")");
+		DEBUG("Palaver: Connecting to '" << url.host << "' on port " << url.port << (useSSL ? " with" : " without") << " TLS (" << sMethod << " " << url.path << ")");
 
-		Connect(m_sHostname, uPort, useSSL);
+		Connect(url.host, url.port, useSSL);
 		EnableReadLine();
-		Write(sMethod + " " + sPath + " HTTP/1.1\r\n");
-		Write("Host: " + m_sHostname + "\r\n");
+		Write(sMethod + " " + url.path + " HTTP/1.1\r\n");
+		Write("Host: " + url.host + "\r\n");
 
 		for (MCString::const_iterator it = mcsHeaders.begin(); it != mcsHeaders.end(); ++it) {
 			const CString &sKey = it->first;
@@ -205,7 +214,7 @@ private:
 
 class PLVHTTPNotificationSocket : public PLVHTTPSocket {
 public:
-	PLVHTTPNotificationSocket(CModule *pModule, const CString &sIdentifier, const CString &sMethod, const CString &sURL, MCString &mcsHeaders, const CString &sContent) : PLVHTTPSocket(pModule, sMethod, sURL, mcsHeaders, sContent) {
+	PLVHTTPNotificationSocket(CModule *pModule, const CString &sIdentifier, const CString &sMethod, PLVURL url, MCString &mcsHeaders, const CString &sContent) : PLVHTTPSocket(pModule, sMethod, url, mcsHeaders, sContent) {
 		m_sIdentifier = sIdentifier;
 	}
 
@@ -257,6 +266,10 @@ public:
 
 	CString GetPushEndpoint() const {
 		return m_sPushEndpoint;
+	}
+
+	PLVURL GetPushURL() const {
+		return PLVURL(m_sPushEndpoint);
 	}
 
 	void SetShowMessagePreview(bool bShowMessagePreview) {
@@ -762,7 +775,7 @@ public:
 
 		mcsHeaders["Authorization"] = CString("Bearer " + token);
 		mcsHeaders["Content-Type"] = "application/json";
-		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushEndpoint(), mcsHeaders, sJSONBody);
+		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, "POST", GetPushURL(), mcsHeaders, sJSONBody);
 		module.AddSocket(pSocket);
 	}
 
