@@ -1322,7 +1322,7 @@ private:
 };
 
 void PLVHTTPNotificationSocket::HandleStatusCode(unsigned int status) {
-	if (status == 401) {
+	if (status == 401 || status == 404) {
 		if (CPalaverMod *pModule = dynamic_cast<CPalaverMod *>(m_pModule)) {
 			DEBUG("palaver: Removing device");
 			pModule->RemoveDeviceWithIdentifier(m_sIdentifier);
