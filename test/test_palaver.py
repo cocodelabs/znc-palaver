@@ -1,6 +1,8 @@
-import time
-import os
 import asyncio
+import json
+import os
+import time
+from typing import Dict
 
 import pytest
 from semantic_version import Version
@@ -27,14 +29,25 @@ async def requires_znc_version(znc_version):
         pytest.skip('ZNC >= {} is required for this test, found {}'.format(znc_version, version))
 
 
-async def assert_user_agent(header):
-    header = header.decode('utf-8')
-    assert header.endswith('\r\n')
+async def read_headers(reader) -> Dict[str, str]:
+    headers = {}
 
-    (name, value) = header.strip().split(': ')
-    assert name == 'User-Agent'
+    while True:
+        line = await reader.readline()
+        if line == b'\r\n':
+            return headers
 
-    products = value.split(' ')
+        name, _, value = line.decode('utf-8').strip().partition(': ')
+        # while HTTP allows the multiple headers wiht the same name,
+        # we're keeping implementation simple by not handling that
+        # case (because we don't use it).
+        assert name not in headers
+
+        headers[name] = value
+
+
+async def assert_user_agent(user_agent):
+    products = user_agent.split(' ')
     assert len(products) == 2
 
     product1, product1_version = products[0].split('/')
@@ -155,28 +168,21 @@ async def test_receiving_notification(event_loop):
         line = await reader.readline()
         assert line == b'POST /push HTTP/1.1\r\n'
 
-        line = await reader.readline()
-        assert line == b'Host: 127.0.0.1\r\n'
+        headers = await read_headers(reader)
+        assert headers['Host'] == '127.0.0.1'
+        assert headers['Authorization'] == 'Bearer 9167e47b01598af7423e2ecd3d0a3ec4'
+        assert headers['Connection'] == 'close'
+        assert headers['Content-Length'] == '109'
+        assert headers['Content-Type'] == 'application/json'
+        await assert_user_agent(headers['User-Agent'])
 
         line = await reader.readline()
-        assert line == b'Authorization: Bearer 9167e47b01598af7423e2ecd3d0a3ec4\r\n'
-
-        line = await reader.readline()
-        assert line == b'Connection: close\r\n'
-
-        line = await reader.readline()
-        assert line == b'Content-Length: 109\r\n'
-
-        line = await reader.readline()
-        assert line == b'Content-Type: application/json\r\n'
-
-        await assert_user_agent(await reader.readline())
-
-        line = await reader.readline()
-        assert line == b'\r\n'
-
-        line = await reader.readline()
-        assert line == b'{"badge": 1,"message": "Test notification","sender": "palaver","network": "b758eaab1a4611a310642a6e8419fbff"}'
+        assert json.loads(line.decode('utf-8')) == {
+            'badge': 1,
+            'message': 'Test notification',
+            'sender': 'palaver',
+            'network': 'b758eaab1a4611a310642a6e8419fbff'
+        }
 
         writer.write(b'HTTP/1.1 204 No Content\r\n\r\n')
         await writer.drain()
@@ -219,28 +225,21 @@ async def test_receiving_notification_with_push_token(event_loop):
         line = await reader.readline()
         assert line == b'POST /push HTTP/1.1\r\n'
 
-        line = await reader.readline()
-        assert line == b'Host: 127.0.0.1\r\n'
+        headers = await read_headers(reader)
+        assert headers['Host'] == '127.0.0.1'
+        assert headers['Authorization'] == 'Bearer abcdefg'
+        assert headers['Connection'] == 'close'
+        assert headers['Content-Length'] == '109'
+        assert headers['Content-Type'] == 'application/json'
+        await assert_user_agent(headers['User-Agent'])
 
         line = await reader.readline()
-        assert line == b'Authorization: Bearer abcdefg\r\n'
-
-        line = await reader.readline()
-        assert line == b'Connection: close\r\n'
-
-        line = await reader.readline()
-        assert line == b'Content-Length: 109\r\n'
-
-        line = await reader.readline()
-        assert line == b'Content-Type: application/json\r\n'
-
-        await assert_user_agent(await reader.readline())
-
-        line = await reader.readline()
-        assert line == b'\r\n'
-
-        line = await reader.readline()
-        assert line == b'{"badge": 1,"message": "Test notification","sender": "palaver","network": "b758eaab1a4611a310642a6e8419fbff"}'
+        assert json.loads(line.decode('utf-8')) == {
+            'badge': 1,
+            'message': 'Test notification',
+            'sender': 'palaver',
+            'network': 'b758eaab1a4611a310642a6e8419fbff'
+        }
 
         writer.write(b'HTTP/1.1 204 No Content\r\n\r\n')
         await writer.drain()
