@@ -7,7 +7,7 @@
 
 #define REQUIRESSL
 
-#define ZNC_PALAVER_VERSION "1.2.1"
+#define ZNC_PALAVER_VERSION "1.2.2"
 
 #include <algorithm>
 #include <cmath>
