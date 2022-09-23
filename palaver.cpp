@@ -188,6 +188,10 @@ public:
 
 	}
 
+	virtual void RetryRequest() {
+
+	}
+
 	void ReadLine(const CString& sData) {
 		CString sLine = sData;
 		sLine.TrimRight("\r\n");
@@ -231,18 +235,37 @@ public:
 
 	void Disconnected() {
 		Close(CSocket::CLT_AFTERWRITE);
+
+		if (m_eState == StatusLine) {
+			// If we've already processed the status line, we've already
+			// fired the handle status (and thus an error is not appropriate).
+			RetryRequest();
+		}
 	}
 
 	void Timeout() {
 		DEBUG("Palaver: HTTP Request timed out '" << m_sHostname << "'");
+
+		if (m_eState == StatusLine) {
+			// If we've already processed the status line, we've already
+			// fired the handle status (and thus an error is not appropriate).
+			RetryRequest();
+		}
 	}
 
 	void ConnectionRefused() {
 		DEBUG("Palaver: Connection refused to '" << m_sHostname << "'");
+		RetryRequest();
 	}
 
 	virtual void SockError(int iErrno, const CString &sDescription) {
 		DEBUG("Palaver: HTTP Request failed '" << m_sHostname << "' - " << sDescription);
+
+		if (m_eState == StatusLine) {
+			// If we've already processed the status line, we;ve already
+			// fired the handle status (and thus an error is not appropriate).
+			RetryRequest();
+		}
 	}
 
 	virtual bool SNIConfigureClient(CS_STRING &sHostname) {
@@ -261,6 +284,7 @@ public:
 	}
 
 	virtual void HandleStatusCode(unsigned int status);
+	virtual void RetryRequest();
 
 private:
 	CString m_sIdentifier;
@@ -1387,6 +1411,15 @@ class PLVRetryTimer : public CTimer {
 	}
 };
 
+void PLVHTTPNotificationSocket::RetryRequest() {
+	RetryStrategy retryStrategy = RetryStrategy();
+	if (retryStrategy.GetMaximumRetryAttempts() > (m_attempts + 1)) {
+		DEBUG("palaver: Retrying failed request");
+		m_pModule->AddTimer(
+			new PLVRetryTimer(m_pModule, retryStrategy.GetDelay(m_attempts + 1), "Request Retry", "Retry a failed pysh notification", m_sIdentifier, m_request, m_attempts + 1)
+		);
+	}
+}
 
 void PLVHTTPNotificationSocket::HandleStatusCode(unsigned int status) {
 	if (status == 401 || status == 404) {
@@ -1398,12 +1431,8 @@ void PLVHTTPNotificationSocket::HandleStatusCode(unsigned int status) {
 	}
 
 	RetryStrategy retryStrategy = RetryStrategy();
-	if (retryStrategy.ShouldRetryRequest(status) && retryStrategy.GetMaximumRetryAttempts() > (m_attempts + 1)) {
-		DEBUG("palaver: Retrying failed request");
-		m_pModule->AddTimer(
-			new PLVRetryTimer(m_pModule, retryStrategy.GetDelay(m_attempts + 1), "Request Retry", "Retry a failed pysh notification", m_sIdentifier, m_request, m_attempts + 1)
-		);
-		return;
+	if (retryStrategy.ShouldRetryRequest(status)) {
+		RetryRequest();
 	}
 }
 
