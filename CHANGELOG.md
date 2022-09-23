@@ -1,5 +1,9 @@
 # Changelog for Palaver ZNC Module
 
+## TBD
+
+- Retry sending push notification on failure.
+
 ## 1.2.1 (18/07/2020)
 
 ### Bug Fixes

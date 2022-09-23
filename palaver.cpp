@@ -9,6 +9,9 @@
 
 #define ZNC_PALAVER_VERSION "1.2.1"
 
+#include <algorithm>
+#include <cmath>
+
 #include <znc/Modules.h>
 #include <znc/User.h>
 #include <znc/IRCNetwork.h>
@@ -112,6 +115,24 @@ struct PLVHTTPRequest : PLVHTTPMessage {
 	};
 };
 
+class RetryStrategy {
+public:
+	bool ShouldRetryRequest(unsigned int status) {
+		bool is5xx = status >= 500 && status <= 600;
+		return is5xx;
+	}
+
+	unsigned int GetMaximumRetryAttempts() {
+		return 5;
+	}
+
+	unsigned int GetDelay(unsigned int uAttempts) {
+		double minimumBackoff = 1;
+		double maximumBackoff = 10;
+		return std::max(std::min(pow((double)uAttempts, 2), maximumBackoff), minimumBackoff);
+	}
+};
+
 typedef enum {
 	StatusLine = 0,
 	Headers = 1,
@@ -123,6 +144,9 @@ class PLVHTTPSocket : public CSocket {
 	EPLVHTTPSocketState m_eState;
 
 public:
+	std::shared_ptr<PLVHTTPRequest> m_request;
+	unsigned int m_attempts;
+
 	PLVHTTPSocket(CModule *pModule, PLVURL url) : CSocket(pModule) {
 		m_eState = StatusLine;
 		m_sHostname = url.host;
@@ -135,13 +159,17 @@ public:
 		EnableReadLine();
 	}
 
-	void Send(PLVHTTPRequest &request) {
-		Write(request.method + " " + request.url.path + " HTTP/1.1\r\n");
-		Write("Host: " + request.url.host + "\r\n");
-		Write("Connection: close\r\n");
-		Write("Content-Length: " + CString(request.body.length()) + "\r\n");
+	void Send(std::shared_ptr<PLVHTTPRequest> request, unsigned int attempts) {
+		m_eState = StatusLine;
+		m_request = request;
+		m_attempts = attempts;
 
-		for (MCString::const_iterator it = request.headers.begin(); it != request.headers.end(); ++it) {
+		Write(request.get()->method + " " + request.get()->url.path + " HTTP/1.1\r\n");
+		Write("Host: " + request.get()->url.host + "\r\n");
+		Write("Connection: close\r\n");
+		Write("Content-Length: " + CString(request.get()->body.length()) + "\r\n");
+
+		for (MCString::const_iterator it = request.get()->headers.begin(); it != request.get()->headers.end(); ++it) {
 			const CString &sKey = it->first;
 			const CString &sValue = it->second;
 
@@ -150,8 +178,8 @@ public:
 
 		Write("\r\n");
 
-		if (request.body.length() > 0) {
-			Write(request.body);
+		if (request.get()->body.length() > 0) {
+			Write(request.get()->body);
 		}
 	}
 
@@ -790,9 +818,9 @@ public:
 		mcsHeaders["Content-Type"] = "application/json";
 		mcsHeaders["User-Agent"] = "znc-palaver/" + CString(ZNC_PALAVER_VERSION) + " znc/" + CZNC::GetVersion();
 
-		PLVHTTPRequest request = PLVHTTPRequest(GetPushURL(), "POST", mcsHeaders, sJSONBody);
+		std::shared_ptr<PLVHTTPRequest> request = std::make_shared<PLVHTTPRequest>(GetPushURL(), "POST", mcsHeaders, sJSONBody);
 		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(&module, token, GetPushURL());
-		pSocket->Send(request);
+		pSocket->Send(request, 0);
 		module.AddSocket(pSocket);
 	}
 
@@ -1060,6 +1088,12 @@ public:
 		return false;
 	}
 
+	void SendRequest(const CString &sIdentifier, std::shared_ptr<PLVHTTPRequest> request, unsigned int attempts) {
+		PLVHTTPSocket *pSocket = new PLVHTTPNotificationSocket(this, sIdentifier, request.get()->url);
+		pSocket->Send(request, attempts);
+		AddSocket(pSocket);
+	}
+
 #pragma mark - Serialization
 
 	CString GetConfigPath() const {
@@ -1321,12 +1355,54 @@ private:
 	std::vector<CDevice*> m_vDevices;
 };
 
+class PLVRetryTimer : public CTimer {
+  public:
+	PLVRetryTimer(
+		CModule* pModule,
+		unsigned int uDelay,
+		const CString& sLabel,
+		const CString& sDescription,
+		const CString& sIdentifier,
+		std::shared_ptr<PLVHTTPRequest> request,
+		unsigned int uAttempts
+	) : CTimer(pModule, uDelay, 1, sLabel, sDescription)
+	{
+		m_sIdentifier = sIdentifier;
+		m_request = request;
+		m_uAttempts = uAttempts;
+	}
+	~PLVRetryTimer() override {}
+
+  private:
+	CString m_sIdentifier;
+	std::shared_ptr<PLVHTTPRequest> m_request;
+	unsigned int m_uAttempts;
+
+  protected:
+	void RunJob() override {
+		if (CPalaverMod *pModule = dynamic_cast<CPalaverMod *>(m_pModule)) {
+			pModule->SendRequest(m_sIdentifier, m_request, m_uAttempts);
+		}
+	}
+};
+
+
 void PLVHTTPNotificationSocket::HandleStatusCode(unsigned int status) {
 	if (status == 401 || status == 404) {
 		if (CPalaverMod *pModule = dynamic_cast<CPalaverMod *>(m_pModule)) {
 			DEBUG("palaver: Removing device");
 			pModule->RemoveDeviceWithIdentifier(m_sIdentifier);
 		}
+		return;
+	}
+
+	RetryStrategy retryStrategy = RetryStrategy();
+	if (retryStrategy.ShouldRetryRequest(status) && retryStrategy.GetMaximumRetryAttempts() > (m_attempts + 1)) {
+		DEBUG("palaver: Retrying failed request");
+		m_pModule->AddTimer(
+			new PLVRetryTimer(m_pModule, retryStrategy.GetDelay(m_attempts + 1), "Request Retry", "Retry a failed pysh notification", m_sIdentifier, m_request, m_attempts + 1)
+		);
+		return;
 	}
 }
 

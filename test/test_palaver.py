@@ -1,10 +1,10 @@
 import asyncio
 import json
 import os
-import time
-from typing import Dict
+from typing import Dict, Tuple, Optional
 
 import pytest
+import pytest_asyncio
 from semantic_version import Version
 
 
@@ -46,6 +46,21 @@ async def read_headers(reader) -> Dict[str, str]:
         headers[name] = value
 
 
+async def read_push_request(reader) -> Tuple[Dict[str, str], bytes]:
+    request_line = await reader.readline()
+    assert request_line == b'POST /push HTTP/1.1\r\n'
+
+    headers = await read_headers(reader)
+    assert headers['Host'] == '127.0.0.1'
+    assert headers['Connection'] == 'close'
+    assert headers['Content-Type'] == 'application/json'
+    await assert_user_agent(headers['User-Agent'])
+
+    assert 'Content-Length' in headers
+    body = await reader.read(int(headers['Content-Length']))
+    return headers, body
+
+
 async def assert_user_agent(user_agent):
     products = user_agent.split(' ')
     assert len(products) == 2
@@ -64,7 +79,7 @@ async def setUp():
     allow_root = ' --allow-root' if running_as_root else ''
 
     proc = await asyncio.create_subprocess_shell(f'znc -d test/fixtures --foreground --debug{allow_root}')
-    time.sleep(31 if running_as_root else 1)
+    await asyncio.sleep(31 if running_as_root else 1)
 
     (reader, writer) = await asyncio.open_connection('localhost', 6698)
     writer.write(b'CAP LS 302\r\n')
@@ -98,8 +113,15 @@ async def tearDown(proc):
         os.remove(config)
 
 
-async def test_registering_device():
-    (proc, reader, writer) = await setUp()
+@pytest_asyncio.fixture
+async def znc():
+    proc, reader, writer = await setUp()
+    yield (reader, writer)
+    await tearDown(proc)
+
+
+async def test_registering_device(znc):
+    reader, writer = znc
 
     writer.write(b'PALAVER IDENTIFY 9167e47b01598af7423e2ecd3d0a3ec4 611d3a30a3d666fc491cdea0d2e1dd6e b758eaab1a4611a310642a6e8419fbff\r\n')
     await writer.drain()
@@ -114,8 +136,6 @@ async def test_registering_device():
     writer.write(b'PALAVER ADD MENTION-KEYWORD {nick}\r\n')
     writer.write(b'PALAVER END\r\n')
     await writer.drain()
-
-    await tearDown(proc)
 
 
 async def test_loading_module_new_cap():
@@ -161,23 +181,13 @@ async def test_unloading_module_del_cap():
     await tearDown(proc)
 
 
-async def test_receiving_notification():
-    (proc, reader, writer) = await setUp()
+async def test_receiving_notification(znc):
+    reader, writer = znc
 
     async def connected(reader, writer):
-        line = await reader.readline()
-        assert line == b'POST /push HTTP/1.1\r\n'
-
-        headers = await read_headers(reader)
-        assert headers['Host'] == '127.0.0.1'
+        headers, body = await read_push_request(reader)
         assert headers['Authorization'] == 'Bearer 9167e47b01598af7423e2ecd3d0a3ec4'
-        assert headers['Connection'] == 'close'
-        assert headers['Content-Length'] == '109'
-        assert headers['Content-Type'] == 'application/json'
-        await assert_user_agent(headers['User-Agent'])
-
-        line = await reader.readline()
-        assert json.loads(line.decode('utf-8')) == {
+        assert json.loads(body.decode('utf-8')) == {
             'badge': 1,
             'message': 'Test notification',
             'sender': 'palaver',
@@ -193,7 +203,7 @@ async def test_receiving_notification():
     server = await asyncio.start_server(connected, host='127.0.0.1', port=0)
     await asyncio.sleep(0.2)
     addr = server.sockets[0].getsockname()
-    url = f'Serving on http://{addr[0]}:{addr[1]}/push'
+    url = f'http://{addr[0]}:{addr[1]}/push'
 
     writer.write(b'PALAVER IDENTIFY 9167e47b01598af7423e2ecd3d0a3ec4 611d3a30a3d666fc491cdea0d2e1dd6e b758eaab1a4611a310642a6e8419fbff\r\n')
     await writer.drain()
@@ -213,28 +223,14 @@ async def test_receiving_notification():
     server.close()
     await server.wait_closed()
 
-    await tearDown(proc)
-
     assert connected.called
 
 
-async def test_receiving_notification_with_push_token():
-    (proc, reader, writer) = await setUp()
-
+async def test_receiving_notification_with_push_token(znc):
     async def connected(reader, writer):
-        line = await reader.readline()
-        assert line == b'POST /push HTTP/1.1\r\n'
-
-        headers = await read_headers(reader)
-        assert headers['Host'] == '127.0.0.1'
+        headers, body = await read_push_request(reader)
         assert headers['Authorization'] == 'Bearer abcdefg'
-        assert headers['Connection'] == 'close'
-        assert headers['Content-Length'] == '109'
-        assert headers['Content-Type'] == 'application/json'
-        await assert_user_agent(headers['User-Agent'])
-
-        line = await reader.readline()
-        assert json.loads(line.decode('utf-8')) == {
+        assert json.loads(body.decode('utf-8')) == {
             'badge': 1,
             'message': 'Test notification',
             'sender': 'palaver',
@@ -250,8 +246,9 @@ async def test_receiving_notification_with_push_token():
     server = await asyncio.start_server(connected, host='127.0.0.1', port=0)
     await asyncio.sleep(0.2)
     addr = server.sockets[0].getsockname()
-    url = f'Serving on http://{addr[0]}:{addr[1]}/push'
+    url = f'http://{addr[0]}:{addr[1]}/push'
 
+    reader, writer = znc
     writer.write(b'PALAVER IDENTIFY 9167e47b01598af7423e2ecd3d0a3ec4 611d3a30a3d666fc491cdea0d2e1dd6e b758eaab1a4611a310642a6e8419fbff\r\n')
     await writer.drain()
 
@@ -271,6 +268,60 @@ async def test_receiving_notification_with_push_token():
     server.close()
     await server.wait_closed()
 
-    await tearDown(proc)
-
     assert connected.called
+
+
+async def test_receiving_notification_with_retry_on_server_error(znc):
+    reader, writer = znc
+
+    async def connected(reader, writer):
+        headers, body = await read_push_request(reader)
+        assert headers['Authorization'] == 'Bearer abcdefg'
+        assert json.loads(body.decode('utf-8')) == {
+            'badge': 1,
+            'message': 'Test notification',
+            'sender': 'palaver',
+            'network': 'b758eaab1a4611a310642a6e8419fbff'
+        }
+
+        if not hasattr(connected, 'requests'):
+            connected.requests = 1
+            writer.write(b'HTTP/1.1 503 Service Unavailable\r\n')
+        else:
+            connected.requests += 1
+            writer.write(b'HTTP/1.1 204 No Content\r\n')
+
+        writer.write(b'Connection: close\r\n')
+        writer.write(b'\r\n')
+
+        await writer.drain()
+        writer.close()
+
+    server = await asyncio.start_server(connected, host='127.0.0.1', port=8121)
+    await asyncio.sleep(0.2)
+    addr = server.sockets[0].getsockname()
+    url = f'http://{addr[0]}:{addr[1]}/push'
+
+    writer.write(b'PALAVER IDENTIFY 9167e47b01598af7423e2ecd3d0a3ec4 611d3a30a3d666fc491cdea0d2e1dd6e b758eaab1a4611a310642a6e8419fbff\r\n')
+    await writer.drain()
+
+    line = await reader.readline()
+    assert line == b'PALAVER REQ *\r\n'
+
+    writer.write(b'PALAVER BEGIN 9167e47b01598af7423e2ecd3d0a3ec4 611d3a30a3d666fc491cdea0d2e1dd6e\r\n')
+    writer.write(f'PALAVER SET PUSH-ENDPOINT {url}\r\n'.encode('utf-8'))
+    writer.write(f'PALAVER SET PUSH-TOKEN abcdefg\r\n'.encode('utf-8'))
+    writer.write(b'PALAVER END\r\n')
+    await writer.drain()
+
+    writer.write(b'PRIVMSG *palaver :test\r\n')
+    await writer.drain()
+
+    line = await reader.readline()
+    assert line == b':*palaver!znc@znc.in PRIVMSG admin :Notification sent to 1 clients.\r\n'
+
+    await asyncio.sleep(1.2)
+    server.close()
+    await server.wait_closed()
+
+    assert connected.requests == 2
