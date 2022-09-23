@@ -118,8 +118,9 @@ struct PLVHTTPRequest : PLVHTTPMessage {
 class RetryStrategy {
 public:
 	bool ShouldRetryRequest(unsigned int status) {
+		bool isRateLimited = status == 429;
 		bool is5xx = status >= 500 && status <= 600;
-		return is5xx;
+		return isRateLimited || is5xx;
 	}
 
 	unsigned int GetMaximumRetryAttempts() {
