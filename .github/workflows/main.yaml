@@ -1,0 +1,21 @@
+on: push
+jobs:
+  test:
+    strategy:
+      matrix:
+        znc:
+          - '1.7'
+          - '1.8'
+    runs-on: ubuntu-latest
+    container: znc:${{ matrix.znc }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - run: /opt/znc/bin/znc-buildmod palaver.cpp
+      - run: |
+          export PATH="/opt/znc/bin:$PATH"
+          python3 -m ensurepip
+          pip3 install pytest-asyncio semantic_version
+      - run: |
+          export PATH="/opt/znc/bin:$PATH"
+          make test-integration
