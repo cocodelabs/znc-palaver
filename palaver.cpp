@@ -10,7 +10,6 @@
 #define ZNC_PALAVER_VERSION "1.2.1"
 
 #include <algorithm>
-#include <cmath>
 
 #include <znc/Modules.h>
 #include <znc/User.h>
@@ -128,9 +127,9 @@ public:
 	}
 
 	unsigned int GetDelay(unsigned int uAttempts) {
-		double minimumBackoff = 1;
-		double maximumBackoff = 10;
-		return std::max(std::min(pow((double)uAttempts, 2), maximumBackoff), minimumBackoff);
+		unsigned int minimumBackoff = 1;
+		unsigned int maximumBackoff = 10;
+		return std::max(std::min(uAttempts * 2, maximumBackoff), minimumBackoff);
 	}
 };
 

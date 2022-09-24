@@ -320,7 +320,7 @@ async def test_receiving_notification_with_retry_on_rate_limit(znc):
     line = await reader.readline()
     assert line == b':*palaver!znc@znc.in PRIVMSG admin :Notification sent to 1 clients.\r\n'
 
-    await asyncio.sleep(1.2)
+    await asyncio.sleep(2.2)
     server.close()
     await server.wait_closed()
 
@@ -376,7 +376,7 @@ async def test_receiving_notification_with_retry_on_server_error(znc):
     line = await reader.readline()
     assert line == b':*palaver!znc@znc.in PRIVMSG admin :Notification sent to 1 clients.\r\n'
 
-    await asyncio.sleep(1.2)
+    await asyncio.sleep(2.2)
     server.close()
     await server.wait_closed()
 
@@ -433,7 +433,7 @@ async def test_receiving_notification_with_retry_on_disconnect(znc):
     line = await reader.readline()
     assert line == b':*palaver!znc@znc.in PRIVMSG admin :Notification sent to 1 clients.\r\n'
 
-    await asyncio.sleep(1.2)
+    await asyncio.sleep(2.2)
     server.close()
     await server.wait_closed()
 
