@@ -668,7 +668,7 @@ public:
 		return bResult;
 	}
 
-#pragma mark - Serialization
+// MARK: - Serialization
 
 	void ParseLine(const CString& sLine) {
 		if (InNegotiation() == false) {
@@ -798,7 +798,7 @@ public:
 		File.Write("END\n");
 	}
 
-#pragma mark - Notifications
+// MARK: - Notifications
 
 	void SendNotification(CModule& module, const CString& sSender, const CString& sNotification, const CChan *pChannel, CString sIntent = "") {
 		++m_uiBadge;
@@ -933,7 +933,7 @@ public:
 	}
 #endif
 
-#pragma mark - Cap
+// MARK: - Cap
 
 	virtual void OnClientCapLs(CClient* pClient, SCString& ssCaps) {
 		ssCaps.insert(kPLVCapability);
@@ -943,7 +943,7 @@ public:
 		return sCap.Equals(kPLVCapability);
 	}
 
-#pragma mark -
+// MARK: -
 
 	virtual EModRet OnUserRaw(CString& sLine) {
 		return HandleUserRaw(m_pClient, sLine);
@@ -1022,7 +1022,7 @@ public:
 		return CONTINUE;
 	}
 
-#pragma mark -
+// MARK: -
 
 	virtual void OnClientLogin() {
 		CIRCNetwork *pNetwork = GetClient()->GetNetwork();
@@ -1058,7 +1058,7 @@ public:
 		}
 	}
 
-#pragma mark -
+// MARK: -
 
 	CDevice& DeviceWithIdentifier(const CString& sIdentifier) {
 		CDevice *pDevice = NULL;
@@ -1118,7 +1118,7 @@ public:
 		AddSocket(pSocket);
 	}
 
-#pragma mark - Serialization
+// MARK: - Serialization
 
 	CString GetConfigPath() const {
 		return (GetSavePath() + "/palaver.conf");
@@ -1206,7 +1206,7 @@ public:
 		delete pFile;
 	}
 
-#pragma mark -
+// MARK: -
 
 	void ParseMessage(CNick& Nick, CString& sMessage, CChan *pChannel = NULL, CString sIntent = "") {
 		if (m_pNetwork->IsUserOnline() == false) {
@@ -1272,7 +1272,7 @@ public:
 		return CONTINUE;
 	}
 
-#pragma mark - Commands
+// MARK: - Commands
 
 	void HandleTestCommand(const CString& sLine) {
 		if (m_pNetwork) {
