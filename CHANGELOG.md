@@ -1,5 +1,9 @@
 # Changelog for Palaver ZNC Module
 
+## 1.3.0 (01/04/2023)
+
+- Send ZNC broadcasts as push notifications to all clients.
+
 ## 1.2.2 (18/09/2022)
 
 - Retry sending push notification on failure.

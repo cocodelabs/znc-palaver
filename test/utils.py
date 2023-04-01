@@ -6,15 +6,7 @@ import pytest
 from semantic_version import Version
 
 
-async def setUp():
-    running_as_root = os.getuid() == 0
-    allow_root = ' --allow-root' if running_as_root else ''
-
-    proc = await asyncio.create_subprocess_shell(
-        f'znc -d test/fixtures --foreground --debug{allow_root}'
-    )
-    await asyncio.sleep(31 if running_as_root else 1)
-
+async def open_registered_znc_connection():
     (reader, writer) = await asyncio.open_connection('localhost', 6698)
     writer.write(b'CAP LS 302\r\n')
 
@@ -32,6 +24,18 @@ async def setUp():
 
     line = await reader.readline()
     assert line == b':irc.znc.in 001 admin :Welcome to ZNC\r\n'
+    return (reader, writer)
+
+
+async def setUp():
+    running_as_root = os.getuid() == 0
+    allow_root = ' --allow-root' if running_as_root else ''
+
+    proc = await asyncio.create_subprocess_shell(
+        f'znc -d test/fixtures --foreground --debug{allow_root}'
+    )
+    await asyncio.sleep(31 if running_as_root else 1)
+    reader, writer = await open_registered_znc_connection()
 
     return (proc, reader, writer)
 

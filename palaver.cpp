@@ -7,7 +7,7 @@
 
 #define REQUIRESSL
 
-#define ZNC_PALAVER_VERSION "1.2.2"
+#define ZNC_PALAVER_VERSION "1.3.0"
 
 #include <algorithm>
 
@@ -343,6 +343,10 @@ public:
 
 	bool GetShowMessagePreview() const {
 		return m_bShowMessagePreview;
+	}
+
+	bool HasClients() const {
+		return !m_mClientNetworkIDs.empty();
 	}
 
 	bool HasClient(const CClient& client) const {
@@ -1269,6 +1273,19 @@ public:
 
 	virtual EModRet OnPrivAction(CNick& Nick, CString& sMessage) {
 		ParseMessage(Nick, sMessage, NULL, "ACTION");
+		return CONTINUE;
+	}
+
+	virtual EModRet OnBroadcast(CString& sMessage) {
+		for (std::vector<CDevice*>::const_iterator it = m_vDevices.begin();
+				it != m_vDevices.end(); ++it)
+		{
+			CDevice& device = **it;
+			if (!device.HasClients()) {
+				device.SendNotification(*this, "ZNC Admin", sMessage, NULL);
+			}
+		}
+
 		return CONTINUE;
 	}
 
