@@ -20,6 +20,14 @@ mark a connected client as away.
 This is so while you are on IRC on another device you wont receive many
 notifications on your phone at the same time.
 
+### Privacy
+
+* Push notifications are sent from the ZNC server to Palaver servers over TLS.
+* Palaver servers forward the notifications to Apple servers.
+* Palaver clients retrieve the notifications from the Apple servers.
+* As a result, Palaver and Apple servers have access to the content of a notification.
+The content of a notification includes the message that triggered it.
+
 ## Installation
 
 ### Download the module
