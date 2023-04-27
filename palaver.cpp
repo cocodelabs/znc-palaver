@@ -812,13 +812,25 @@ public:
 			sJSON += ",\"private\": true";
 		}
 
-		sJSON += ",\"sender\": \"" + sSender.Replace_n("\"", "\\\"") + "\"";
+		if (GetShowMessagePreview()) {
+			sJSON += ",\"sender\": \"" + sSender.Replace_n("\"", "\\\"") + "\"";
+		} else {
+			sJSON += ",\"sender\": \"Redacted Sender\"";
+		}
 		if (pChannel) {
-			sJSON += ",\"channel\": \"" + pChannel->GetName().Replace_n("\"", "\\\"") + "\"";
+			if (GetShowMessagePreview()) {
+				sJSON += ",\"channel\": \"" + pChannel->GetName().Replace_n("\"", "\\\"") + "\"";
+			} else {
+				sJSON += ",\"channel\": \"Redacted Channel\"";
+			}
 		}
 		if (module.GetNetwork()) {
-			const CString sNetworkID = GetNetworkID(*module.GetNetwork());
-			sJSON += ",\"network\": \"" + sNetworkID.Replace_n("\"", "\\\"") + "\"";
+			if (GetShowMessagePreview()) {
+				const CString sNetworkID = GetNetworkID(*module.GetNetwork());
+				sJSON += ",\"network\": \"" + sNetworkID.Replace_n("\"", "\\\"") + "\"";
+			} else {
+				sJSON += ",\"network\": \"Redacted Network\"";
+			}
 		}
 		if (!sIntent.empty()) {
 			sJSON += ",\"intent\": \"" + sIntent + "\"";
